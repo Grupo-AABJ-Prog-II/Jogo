@@ -95,55 +95,58 @@ Tela tela_resolucao_menu_principal(int *tamanho_bloco) {
 }
 
 Tela tela_menu() {
-    // Desenha o fundo esticado para caber na tela se ela mudar de tamanho
-    /*DrawTexturePro(menuBackground, 
-                   (Rectangle){0, 0, menuBackground.width, menuBackground.height},
-                   (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()},
-                   (Vector2){0, 0}, 0.0f, WHITE);*/
-
     // --- TÍTULO CENTRALIZADO ---
-    // Não usamos mais X=50, apenas a altura Y=50
-    DrawCenteredText("2.10. Menu de Opcoes:", 50, 40, YELLOW);
+    DrawCenteredText("PAUSA", 50, 40, YELLOW);
 
     int startY = 150;     // Altura inicial dos botões
     int spacing = 50;     // Espaço entre eles
     int fontSize = 20;
     
     //Lógica dos botões
-    if (IsKeyPressed(KEY_N)) { return TELA_JOGO; }
+    if (IsKeyPressed(KEY_N)) { return TELA_MENU_PRINCIPAL; } // Ajustado para voltar ao menu principal que reinicia
     if (IsKeyPressed(KEY_C)) { return TELA_JOGO; }
-    if (IsKeyPressed(KEY_S)) { return TELA_SAIR; }
+    if (IsKeyPressed(KEY_S)) { return TELA_SAIR; } // Salvar nao implementado aqui, entao sair
     if (IsKeyPressed(KEY_Q)) { return TELA_SAIR; }
     if (IsKeyPressed(KEY_V)) { return TELA_JOGO; }
     
     // --- BOTÕES CENTRALIZADOS ---
-    // Substituímos DrawClickableText por DrawCenteredButton
-    // Note que o argumento 'X' sumiu.
-    
-    if (DrawCenteredButton("- Novo Jogo (N)", startY, fontSize, WHITE, GREEN)) {
-        // TODO
-        //InitNewGame(&gameState);
+    if (DrawCenteredButton("Continuar Jogo (C)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
-    }
 
-    if (DrawCenteredButton("- Carregar jogo (C)", startY + spacing, fontSize, WHITE, GREEN))
-        // TODO
-        //if (LoadGameBinary(&gameState))
-            return TELA_JOGO;
+    // A opção "Novo Jogo" aqui poderia levar ao Menu Principal para resetar
+    if (DrawCenteredButton("Menu Principal (N)", startY + spacing, fontSize, WHITE, BLUE))
+        return TELA_MENU_PRINCIPAL;
 
-    if (DrawCenteredButton("- Salvar jogo (S)", startY + spacing * 2, fontSize, WHITE, GREEN))
-        // TODO
-        // SaveGameBinary(&gameState);
-        ;
-
-    if (DrawCenteredButton("- Sair do jogo (Q)", startY + spacing * 3, fontSize, WHITE, GREEN))
+    if (DrawCenteredButton("Sair do Jogo (Q)", startY + spacing * 2, fontSize, WHITE, RED))
         return TELA_SAIR;
-
-    if (DrawCenteredButton("- Voltar (V)", startY + spacing * 4, fontSize, WHITE, GREEN))
-        return TELA_JOGO;
-
-    DrawCenteredText("(Mouse ou Teclado)", startY + spacing * 6, 20, LIGHTGRAY);
 
     return TELA_MENU;
 }
 
+Tela tela_gameover(int pontuacaoFinal) {
+    DrawCenteredText("GAME OVER", 100, 60, RED);
+    
+    DrawCenteredText(TextFormat("Pontuacao Final: %d", pontuacaoFinal), 200, 30, WHITE);
+
+    if (DrawCenteredButton("Voltar ao Menu", 350, 30, GRAY, WHITE)) {
+        return TELA_MENU_PRINCIPAL;
+    }
+    
+    if (DrawCenteredButton("Sair", 400, 30, GRAY, RED)) {
+        return TELA_SAIR;
+    }
+
+    return TELA_GAMEOVER;
+}
+
+Tela tela_vitoria(int pontuacaoFinal) {
+    DrawCenteredText("VITORIA!", 100, 60, GREEN);
+    
+    DrawCenteredText(TextFormat("Pontuacao Final: %d", pontuacaoFinal), 200, 30, WHITE);
+
+    if (DrawCenteredButton("Voltar ao Menu", 350, 30, GRAY, WHITE)) {
+        return TELA_MENU_PRINCIPAL;
+    }
+
+    return TELA_VITORIA;
+}

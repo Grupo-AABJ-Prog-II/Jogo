@@ -76,7 +76,7 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
                 mapa->pacman.spawnPos.y = l;
                 mapa->pacman.pos = mapa->pacman.spawnPos;
 
-                mapa->grade[l][c] = '.';
+                mapa->grade[l][c] = '.'; 
 
                 pacmanCount++; 
             }
@@ -87,13 +87,17 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
                 mapa->portais[mapa->qtdPortais - 1].y = l;
             }
             if (ch == 'F') {
-                mapa->grade[l][c] = '.';
+                mapa->grade[l][c] = '.'; 
 
                 mapa->numero_fantasmas++;
                 mapa->fantasmas = realloc(mapa->fantasmas, mapa->numero_fantasmas * sizeof(Fantasma));
 
                 mapa->fantasmas[mapa->numero_fantasmas - 1].pos.x = c;
                 mapa->fantasmas[mapa->numero_fantasmas - 1].pos.y = l;
+                
+                // [NOVO] Salva a posição original para resetar a fase depois
+                mapa->fantasmas[mapa->numero_fantasmas - 1].spawnPosOriginal.x = c;
+                mapa->fantasmas[mapa->numero_fantasmas - 1].spawnPosOriginal.y = l;
 
                 mapa->fantasmas[mapa->numero_fantasmas - 1].moveTimer = 0;
                 mapa->fantasmas[mapa->numero_fantasmas - 1].tempoVulneravel = 0;
@@ -136,13 +140,11 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
     }
     
     TentarGerarPointPellets(mapa);
+    
+    // Calcula o spawn global "S" mais distante para respawn
+    CalcularSpawnDistante(mapa);
 
-    /*Aqui inicia a logica do flood fill, a função recursiva está um pouco mais abaixo no codigo, mas basicamente
-     ele é utilizado aqui para validar a jogabilidade do mapa. Ele simula o movimento do Pac-Man a partir de sua posição
-     inicial, marcando todas as células alcançáveis (chão, portais, itens).
-     para garantir que não existam itens isoladas ou itens cercados por paredes
-     que tornariam o jogo impossível de ser completado. Se, ao final da inundação,
-     restar alguma pellet não visitada, o mapa é considerado inválido.*/
+    /*Aqui inicia a logica do flood fill*/
     int **visited = (int**)malloc(mapa->linhas * sizeof(int*));
     for(int i=0; i<mapa->linhas; i++) {
         visited[i] = (int*)calloc(mapa->colunas, sizeof(int));
@@ -181,7 +183,7 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
 
 
 
-// Save/Load Completo
+// --- Novas Funções para Suporte ao Jogo (Save/Load Completo) ---
 
 // Conta quantas pastilhas restam no mapa para verificar vitoria
 int ContarPastilhasRestantes(Mapa *mapa) {
@@ -196,97 +198,6 @@ int ContarPastilhasRestantes(Mapa *mapa) {
     }
     return count;
 }
-
-/*
-// Agora recebe a posição ATUAL do Pacman e a lista de Fantasmas para salvar no binário
-int SalvarEstadoMapa(Mapa *mapa, const char *nomeArquivo, Posicao pacmanAtual, Posicao *fantasmas, int qtdFantasmas) {
-    FILE *file = fopen(nomeArquivo, "wb");
-    if (!file) return 0;
-
-    // 1. Salva dados do Mapa (Grade, Spawns, Quantidades)
-    fwrite(&mapa->linhas, sizeof(int), 1, file);
-    fwrite(&mapa->colunas, sizeof(int), 1, file);
-    // TODO: salvar pacmans e fantasmos
-    fwrite(&mapa->qtdPortais, sizeof(int), 1, file);
-    fwrite(&mapa->qtdPointPellets, sizeof(int), 1, file);
-
-    // 2. Salva a grade (Contém quais pastilhas já foram comidas)
-    for (int i = 0; i < mapa->linhas; i++) {
-        fwrite(mapa->grade[i], sizeof(char), mapa->colunas, file);
-    }
-
-    // 3. Salva vetores dinâmicos (Portais e Conexões)
-    if (mapa->qtdPortais > 0) {
-        fwrite(mapa->portais, sizeof(Posicao), mapa->qtdPortais, file);
-        fwrite(mapa->conexoes, sizeof(int), mapa->qtdPortais, file);
-    }
-
-    // 4. [NOVO] Salva o Estado Dinâmico (Posição Atual do Pacman e Fantasmas)
-    fwrite(&pacmanAtual, sizeof(Posicao), 1, file);
-    fwrite(&qtdFantasmas, sizeof(int), 1, file);
-    if (qtdFantasmas > 0 && fantasmas != NULL) {
-        fwrite(fantasmas, sizeof(Posicao), qtdFantasmas, file);
-    }
-
-    fclose(file);
-    return 1;
-}
-
-// Carrega o jogo e retorna as posições salvas via ponteiros (outPacman, outFantasmas)
-Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **outFantasmas, int *outQtdFantasmas) {
-    FILE *file = fopen(nomeArquivo, "rb");
-    if (!file) return NULL;
-
-    Mapa *mapa = (Mapa*)malloc(sizeof(Mapa));
-    
-    // Lê dados básicos
-    fread(&mapa->linhas, sizeof(int), 1, file);
-    fread(&mapa->colunas, sizeof(int), 1, file);
-    fread(&mapa->qtdPortais, sizeof(int), 1, file);
-    fread(&mapa->qtdPointPellets, sizeof(int), 1, file);
-
-    // Aloca e Lê a grade
-    mapa->grade = (char**)malloc(mapa->linhas * sizeof(char*));
-    for (int i = 0; i < mapa->linhas; i++) {
-        mapa->grade[i] = (char*)malloc((mapa->colunas + 2) * sizeof(char));
-        fread(mapa->grade[i], sizeof(char), mapa->colunas, file);
-        mapa->grade[i][mapa->colunas] = '\0';
-    }
-
-    // Aloca e Lê Portais
-    mapa->portais = NULL;
-    mapa->conexoes = NULL;
-    if (mapa->qtdPortais > 0) {
-        mapa->portais = (Posicao *)malloc(mapa->qtdPortais * sizeof(Posicao));
-        fread(mapa->portais, sizeof(Posicao), mapa->qtdPortais, file);
-
-        mapa->conexoes = (int *)malloc(mapa->qtdPortais * sizeof(int));
-        fread(mapa->conexoes, sizeof(int), mapa->qtdPortais, file);
-    }
-
-    // Lê as Posições Dinâmicas e retorna pelos ponteiros
-    if (outPacman) {
-        fread(outPacman, sizeof(Posicao), 1, file);
-    } else {
-        // Se o usuário não pediu (passou NULL), lê para descartar
-        Posicao temp; 
-        fread(&temp, sizeof(Posicao), 1, file);
-    }
-
-    if (outQtdFantasmas && outFantasmas) {
-        fread(outQtdFantasmas, sizeof(int), 1, file);
-        if (*outQtdFantasmas > 0) {
-            *outFantasmas = (Posicao *)malloc((*outQtdFantasmas) * sizeof(Posicao));
-            fread(*outFantasmas, sizeof(Posicao), *outQtdFantasmas, file);
-        } else {
-            *outFantasmas = NULL;
-        }
-    }
-
-    fclose(file);
-    return mapa;
-}
-*/
 
 void LiberarMapa(Mapa *mapa) {
     if (!mapa) return;
@@ -323,19 +234,38 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
             int py = y * tamanhoBloco;
             char tile = mapa->grade[y][x];
 
+            // 1. Desenha Pacman
             if (mapa->pacman.pos.x == x && mapa->pacman.pos.y == y) {
                 DesenharSpriteOuForma(sprites->pacman, px, py, YELLOW, 1, 1.0f, WHITE, tamanhoBloco);
-                continue;
+                continue; 
             }
-            bool f = false;
+            
+            // 2. Desenha Fantasmas
+            bool temFantasma = false;
             for (int i = 0; i < mapa->numero_fantasmas; i++) {
                 if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y) {
-                    DesenharSpriteOuForma(sprites->fantasma, px, py, RED, 1, 1.0f, WHITE, tamanhoBloco);
-                    f = true;
-                    break;
+                    
+                    Color corFantasma = RED;
+                    Color tintSprite = WHITE;
+
+                    // Lógica de Piscar (Vulnerável)
+                    if (mapa->fantasmas[i].estaVulneravel) {
+                        // Pisca a cada 0.2 segundos (5x por segundo)
+                        if (fmod(GetTime(), 0.4) < 0.2) {
+                            corFantasma = BLUE; // Azul vulnerável
+                            tintSprite = BLUE;
+                        } else {
+                            corFantasma = WHITE; // Branco piscando
+                            tintSprite = WHITE;
+                        }
+                    }
+
+                    DesenharSpriteOuForma(sprites->fantasma, px, py, corFantasma, 1, 1.0f, tintSprite, tamanhoBloco);
+                    temFantasma = true;
+                    break; 
                 }
             }
-            if (f)
+            if (temFantasma)
                 continue;
 
 
@@ -395,6 +325,7 @@ void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo
     if (tex.id > 0) {
         Rectangle fonte = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
         Rectangle destino = { (float)x, (float)y, (float)tamanhoBloco, (float)tamanhoBloco };
+        // Se tiver tint (cor diferente de WHITE), aplica na textura
         DrawTexturePro(tex, fonte, destino, (Vector2){0,0}, 0.0f, tint);
     } else {
         int cx = x + tamanhoBloco / 2;
@@ -408,15 +339,6 @@ void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo
     }
 }
 
-// TODO: essa função não está complexa demais?
-/*Função para calcular a conexão dos portais. O numero de portais nunca pode ser ímpar. Caso haja mais de um par de portal, 
-o portal ira se conectar aquele que estiver na linha paralela a ele, no caso 
-a oposta, se tiver mais de um portal nessa linha, escolhe algum dos 2 aleatoriamente. 
-Se não houver portal na linha paralela, escolhe o mais distante, que nao esteja na mesma linha. 
-Se não há portal que esteja em outra linha a nao ser a que o proprio portal está, ele escolhe esse portal. 
-Um portal nao pode se conectar a outro portal que ja tenha um outro portal conectar. 
-Ou seja, se T1-T2, T3 nao poderá se conectar a T1 e nem a T2, pois eles ja tem um par
-*/
 void ConectarPortais(Mapa *mapa) {
     // Aloca vetor de conexões (indice -> indice)
     mapa->conexoes = (int *)malloc(mapa->qtdPortais * sizeof(int));
@@ -431,13 +353,10 @@ void ConectarPortais(Mapa *mapa) {
         if (mapa->conexoes[i] != -1) continue;
 
         int melhorPar = -1;
-        
-        // Linha Paralela Oposta
-        // Linha oposta em matriz 0-based é (Total - 1 - Y)
         int linhaOposta = (mapa->linhas - 1) - mapa->portais[i].y;
         
-        // Busca candidatos na linha oposta
-        int candidatosOpostos[mapa->qtdPortais];
+        // CORREÇÃO AQUI: Usar malloc, não VLA
+        int *candidatosOpostos = (int *)malloc(mapa->qtdPortais * sizeof(int));
         int qtdCandidatos = 0;
 
         for (int j = 0; j < mapa->qtdPortais; j++) {
@@ -449,7 +368,6 @@ void ConectarPortais(Mapa *mapa) {
             }
         }
 
-        // Se achou candidatos na linha oposta
         if (qtdCandidatos > 0) {
             // Escolhe aleatoriamente
             int r = rand() % qtdCandidatos;
@@ -462,8 +380,6 @@ void ConectarPortais(Mapa *mapa) {
 
             for (int j = 0; j < mapa->qtdPortais; j++) {
                 if (i == j || mapa->conexoes[j] != -1) continue;
-                
-                // Prioridade: Não estar na mesma linha
                 if (mapa->portais[j].y != mapa->portais[i].y) {
                     double dist = CalcularDistancia(mapa->portais[i], mapa->portais[j]);
                     if (dist > maxDist) {
@@ -481,7 +397,6 @@ void ConectarPortais(Mapa *mapa) {
                 maxDist = -1.0;
                 for (int j = 0; j < mapa->qtdPortais; j++) {
                     if (i == j || mapa->conexoes[j] != -1) continue;
-                    
                     double dist = CalcularDistancia(mapa->portais[i], mapa->portais[j]);
                     if (dist > maxDist) {
                         maxDist = dist;
@@ -490,8 +405,10 @@ void ConectarPortais(Mapa *mapa) {
                 }
             }
         }
+        
+        // Agora o free funcionará corretamente
+        free(candidatosOpostos);
 
-        // Realiza a conexão mútua
         if (melhorPar != -1) {
             mapa->conexoes[i] = melhorPar;
             mapa->conexoes[melhorPar] = i;
@@ -514,3 +431,37 @@ void TentarGerarPointPellets(Mapa *mapa) {
     }
 }
 
+// Calcula o spawn global "S" mais distante para respawn dos fantasmas
+// Se não houver 'S' no mapa, usa uma posição padrão (ex: 1,1) ou a posição inicial do fantasma
+void CalcularSpawnDistante(Mapa *mapa) {
+    double distMax = -1.0;
+    Posicao melhorPos = {1, 1}; // Default seguro caso nao tenha S
+    int achou = 0;
+    
+    // Varre o mapa procurando por 'S'
+    for (int y = 0; y < mapa->linhas; y++) {
+        for (int x = 0; x < mapa->colunas; x++) {
+            if (mapa->grade[y][x] == 'S') {
+                Posicao posAtual = {x, y};
+                double dist = CalcularDistancia(mapa->pacman.spawnPos, posAtual); // Distancia do spawn original do Pacman
+                if (dist > distMax) { 
+                    distMax = dist; 
+                    melhorPos = posAtual; 
+                }
+                achou = 1;
+            }
+        }
+    }
+    
+    mapa->temSpawn = achou;
+    if (achou) {
+        mapa->spawnFantasma = melhorPos;
+    } else {
+        // Se nao tem S definido no mapa, usa o spawn do primeiro fantasma encontrado ou 1,1
+        if (mapa->numero_fantasmas > 0) {
+            mapa->spawnFantasma = mapa->fantasmas[0].pos; // Usa posição do F original
+        } else {
+            mapa->spawnFantasma = melhorPos;
+        }
+    }
+}

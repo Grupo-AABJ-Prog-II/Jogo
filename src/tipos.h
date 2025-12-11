@@ -34,6 +34,7 @@ typedef struct {
 
 typedef struct {
     Posicao pos;
+    Posicao spawnPosOriginal; // [NOVO] Guarda o spawn inicial para resetar fase
     double moveTimer;
     double tempoVulneravel;
     bool estaVulneravel;
@@ -52,9 +53,12 @@ typedef struct {
     Fantasma *fantasmas;
     int numero_fantasmas;
     
-    // Estatísticas
+    // Estatísticas e Spawn Distante
+    Posicao spawnFantasma; 
+    int temSpawn;
+    
     int qtdPointPellets;
-    int totalPellets;// Total de itens para comer (. + o + +)
+    int totalPellets;
 } Mapa;
 
 typedef struct {

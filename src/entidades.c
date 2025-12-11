@@ -18,9 +18,12 @@ int PodeMoverF(int x, int y, Mapa *mapa) {
     if (x < 0 || x >= mapa->colunas || y < 0 || y >= mapa->linhas) return 0;
     if (mapa->grade[y][x] == '#') return 0;
 
+    // Opcional: Impedir fantasmas de passarem uns pelos outros
+    /*
     for (int i = 0; i < mapa->numero_fantasmas; i++)
         if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y)
             return 0;
+    */
     
     return 1;
 }
@@ -52,8 +55,8 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
 
         visitado[atual.y + 1][atual.x] = C_DOWN;
     }
-    if (atual.x + 1 < 40 && mapa->grade[atual.y][atual.x + 1] != '#') {
-        a_visitar[tamanho_visitar] = atual;
+    if (atual.x + 1 < 40 && mapa->grade[atual.y][atual.x + 1] != '#' && visitado[atual.y][atual.x + 1] != C_RIGHT) { 
+         a_visitar[tamanho_visitar] = atual;
         a_visitar[tamanho_visitar++].x++;
 
         visitado[atual.y][atual.x + 1] = C_RIGHT;
@@ -118,33 +121,80 @@ Posicao ProcessarPortal(Posicao atual, Mapa *mapa) {
     return atual; 
 }
 
-void Respawn(Mapa *m) {
-    // Reseta APENAS o Pac-Man para o início
+void RespawnGeral(Mapa *m) {
+    // 1. Reseta o Pac-Man para o início
     m->pacman.pos = m->pacman.spawnPos;
     m->pacman.dir = (Posicao){0, 0};
     m->pacman.proxDir = (Posicao){0, 0};
     m->pacman.moveTimer = 0;
+
+    // 2. Reseta TODOS os Fantasmas para suas posições de spawn ORIGINAIS
+    // Isso garante que o jogo volte ao estado inicial seguro
+    for (int i = 0; i < m->numero_fantasmas; i++) {
+        m->fantasmas[i].pos = m->fantasmas[i].spawnPosOriginal;
+        m->fantasmas[i].moveTimer = 0;
+        m->fantasmas[i].estaVulneravel = false;
+        m->fantasmas[i].tempoVulneravel = 0;
+    }
+}
+
+// Verifica se uma posição já está ocupada por algum fantasma
+bool PosicaoOcupadaPorFantasma(Mapa *mapa, int x, int y) {
+    for (int i = 0; i < mapa->numero_fantasmas; i++) {
+        if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Encontra um spawn livre perto do alvo (S mais distante)
+Posicao EncontrarSpawnLivre(Mapa *mapa, Posicao alvo) {
+    // Se o alvo está livre, usa ele
+    if (!PosicaoOcupadaPorFantasma(mapa, alvo.x, alvo.y)) return alvo;
+
+    // Se não, tenta vizinhos (Cima, Baixo, Esquerda, Direita)
+    // Isso evita que fantasmas fiquem "encavalados"
+    Posicao vizinhos[] = {{0,1}, {0,-1}, {1,0}, {-1,0}};
+    
+    for(int i=0; i<4; i++) {
+        int nx = alvo.x + vizinhos[i].x;
+        int ny = alvo.y + vizinhos[i].y;
+        
+        // Verifica limites, parede e se tem outro fantasma
+        if (PodeMoverF(nx, ny, mapa) && !PosicaoOcupadaPorFantasma(mapa, nx, ny)) {
+            return (Posicao){nx, ny};
+        }
+    }
+    
+    // Se tudo falhar, retorna o alvo mesmo (sobreposição é melhor que crash)
+    return alvo;
 }
 
 bool Colisao(Mapa *mapa, int i) {
     if (mapa->fantasmas[i].estaVulneravel) {
-        mapa->pacman.score += 200;
+        mapa->pacman.score += 200; 
 
-        memmove(&mapa->fantasmas[i], &mapa->fantasmas[i + 1], mapa->numero_fantasmas - i - 1);
-        mapa->numero_fantasmas--;
-        return false;
-    }
-    mapa->pacman.vidas--;
-    mapa->pacman.score -= 200; 
-    if (mapa->pacman.score < 0) mapa->pacman.score = 0;
-    
-    if (mapa->pacman.vidas > 0) {
-        Respawn(mapa);
+        // Respawn Inteligente do Fantasma:
+        // Tenta usar o spawn mais distante, mas verifica se está ocupado
+        Posicao destino = EncontrarSpawnLivre(mapa, mapa->spawnFantasma);
+        mapa->fantasmas[i].pos = destino;
+        
+        mapa->fantasmas[i].estaVulneravel = false;
+        mapa->fantasmas[i].tempoVulneravel = 0;
         
         return false;
     }
+    
+    mapa->pacman.vidas--;
+    
+    // Se ainda tem vidas, faz respawn TOTAL (Pacman e Fantasmas voltam ao inicio)
+    if (mapa->pacman.vidas > 0) {
+        RespawnGeral(mapa);
+        return false;
+    }
 
-    return true;
+    return true; // Game Over
 }
 
 Tela AtualizarJogo(Mapa *mapa) {
@@ -180,19 +230,30 @@ Tela AtualizarJogo(Mapa *mapa) {
 
         // Interação com itens
         char item = mapa->grade[pac->pos.y][pac->pos.x];
+        int pontosGanhos = 0;
+
         if (item == '.') {
-            pac->score += 10;
+            pontosGanhos = 10;
             mapa->grade[pac->pos.y][pac->pos.x] = ' ';
         } else if (item == 'o') {
-            pac->score += 50;
+            pontosGanhos = 100;
             mapa->grade[pac->pos.y][pac->pos.x] = ' ';
             for(int i = 0; i < mapa->numero_fantasmas; i++) {
                 mapa->fantasmas[i].estaVulneravel = true;
                 mapa->fantasmas[i].tempoVulneravel = GetTime() + TEMPO_VULNERAVEL;
             }
         } else if (item == '+') {
-            pac->score += 100;
+            pontosGanhos = 300;
             mapa->grade[pac->pos.y][pac->pos.x] = ' ';
+        }
+
+        if (pontosGanhos > 0) {
+            int scoreAntes = pac->score;
+            pac->score += pontosGanhos;
+
+            if (pac->score / 1000 > scoreAntes / 1000) {
+                pac->vidas++;
+            }
         }
     }
 
@@ -234,6 +295,8 @@ Tela AtualizarJogo(Mapa *mapa) {
                     if (PodeMoverF(f->pos.x - 1, f->pos.y, mapa))
                         f->pos.x--;
                     break;
+                default:
+                    break;
             }
         }
         
@@ -247,7 +310,7 @@ Tela AtualizarJogo(Mapa *mapa) {
 
     for (int y = 0; y < 20; y++)
         for (int x = 0; x < 40; x++)
-            if (mapa->grade[y][x] == '.' || mapa->grade[y][x] == 'o')
+            if (mapa->grade[y][x] == '.' || mapa->grade[y][x] == 'o' || mapa->grade[y][x] == '+')
                 pellets++;
 
     if (pellets == 0)
@@ -255,4 +318,3 @@ Tela AtualizarJogo(Mapa *mapa) {
 
     return TELA_JOGO;
 }
-
