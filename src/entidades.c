@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <math.h>
 #include <raylib.h>
 
@@ -13,7 +14,7 @@ enum Caminho {
     C_RIGHT
 };
 
-int PodeMover(int x, int y, Mapa *mapa) {
+int PodeMoverF(int x, int y, Mapa *mapa) {
     if (x < 0 || x >= mapa->colunas || y < 0 || y >= mapa->linhas) return 0;
     if (mapa->grade[y][x] == '#') return 0;
 
@@ -21,6 +22,13 @@ int PodeMover(int x, int y, Mapa *mapa) {
         if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y)
             return 0;
     
+    return 1;
+}
+
+int PodeMoverP(int x, int y, Mapa *mapa) {
+    if (x < 0 || x >= mapa->colunas || y < 0 || y >= mapa->linhas) return 0;
+    if (mapa->grade[y][x] == '#') return 0;
+
     return 1;
 }
 
@@ -56,7 +64,7 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
 
         visitado[atual.y - 1][atual.x] = C_UP;
     }
-    if (PodeMover(atual.x - 1, atual.y, mapa)) {
+    if (PodeMoverF(atual.x - 1, atual.y, mapa)) {
         a_visitar[tamanho_visitar] = atual;
         a_visitar[tamanho_visitar++].x--;
 
@@ -87,7 +95,7 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
 
             visitado[atual.y - 1][atual.x] = visitado[atual.y][atual.x];
         }
-        if (PodeMover(atual.x - 1, atual.y, mapa) && visitado[atual.y][atual.x - 1] == C_SEILA) {
+        if (PodeMoverF(atual.x - 1, atual.y, mapa) && visitado[atual.y][atual.x - 1] == C_SEILA) {
             a_visitar[tamanho_visitar] = atual;
             a_visitar[tamanho_visitar++].x--;
 
@@ -118,6 +126,28 @@ void Respawn(Mapa *m) {
     m->pacman.moveTimer = 0;
 }
 
+void Colisao(Mapa *mapa, int i) {
+    if (mapa->fantasmas[i].estaVulneravel) {
+        mapa->pacman.score += 200;
+
+        memmove(&mapa->fantasmas[i], &mapa->fantasmas[i + 1], mapa->numero_fantasmas - i - 1);
+        mapa->numero_fantasmas--;
+    } else {
+        mapa->pacman.vidas--;
+        mapa->pacman.score -= 200; 
+        if (mapa->pacman.score < 0) mapa->pacman.score = 0;
+        
+        if (mapa->pacman.vidas > 0) {
+            Respawn(mapa);
+            
+            return; 
+        } else {
+            //return ESTADO_GAMEOVER;
+            return;
+        }
+    }
+}
+
 GameState AtualizarJogo(Mapa *mapa) {
     if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) mapa->pacman.proxDir = (Posicao){1, 0};
     else if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))  mapa->pacman.proxDir = (Posicao){-1, 0};
@@ -132,14 +162,14 @@ GameState AtualizarJogo(Mapa *mapa) {
         int nextX = pac->pos.x + pac->proxDir.x;
         int nextY = pac->pos.y + pac->proxDir.y;
 
-        if (PodeMover(nextX, nextY, mapa)) {
+        if (PodeMoverP(nextX, nextY, mapa)) {
             pac->dir = pac->proxDir;
             pac->pos.x = nextX;
             pac->pos.y = nextY;
         } else {
             nextX = pac->pos.x + pac->dir.x;
             nextY = pac->pos.y + pac->dir.y;
-            if (PodeMover(nextX, nextY, mapa)) {
+            if (PodeMoverP(nextX, nextY, mapa)) {
                 pac->pos.x = nextX;
                 pac->pos.y = nextY;
             }
@@ -148,7 +178,6 @@ GameState AtualizarJogo(Mapa *mapa) {
         if (mapa->grade[pac->pos.y][pac->pos.x] == 'T') {
             pac->pos = ProcessarPortal(pac->pos, mapa);
         }
-
 
         // Interação com itens
         char item = mapa->grade[pac->pos.y][pac->pos.x];
@@ -191,42 +220,27 @@ GameState AtualizarJogo(Mapa *mapa) {
 
             switch (dir) {
                 case C_DOWN:
-                    if (PodeMover(f->pos.x, f->pos.y + 1, mapa))
+                    if (PodeMoverF(f->pos.x, f->pos.y + 1, mapa))
                         f->pos.y++;
                     break;
                 case C_UP:
-                    if (PodeMover(f->pos.x, f->pos.y - 1, mapa))
+                    if (PodeMoverF(f->pos.x, f->pos.y - 1, mapa))
                         f->pos.y--;
                     break;
                 case C_RIGHT:
-                    if (PodeMover(f->pos.x + 1, f->pos.y, mapa))
+                    if (PodeMoverF(f->pos.x + 1, f->pos.y, mapa))
                         f->pos.x++;
                     break;
                 case C_LEFT:
-                    if (PodeMover(f->pos.x - 1, f->pos.y, mapa))
+                    if (PodeMoverF(f->pos.x - 1, f->pos.y, mapa))
                         f->pos.x--;
                     break;
             }
         }
         
         if (pac->pos.x == f->pos.x && pac->pos.y == f->pos.y) {
-            if (f->estaVulneravel) {
-                pac->score += 200;
-                // TODO: matar fantasma
-                //f->estaAtivo = 0; 
-            } else {
-                pac->vidas--;
-                pac->score -= 200; 
-                if (pac->score < 0) pac->score = 0;
-                
-                if (pac->vidas > 0) {
-                    Respawn(mapa);
-                    
-                    break; 
-                } else {
-                    return ESTADO_GAMEOVER;
-                }
-            }
+            Colisao(mapa, i);
+            break;
         }
     }
 
