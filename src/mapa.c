@@ -9,7 +9,7 @@
 // Declarações locais
 void TentarGerarPointPellets(Mapa *mapa);
 void CalcularSpawnDistante(Mapa *mapa);
-void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo, float escala, Color tint, int tamanhoBloco);
+void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo, float escala, Color tint, int tamanhoBloco, float rotacao);
 void ConectarPortais(Mapa *mapa);
 void FloodFill(Mapa *mapa, int x, int y, int **visited); 
 void LiberarMapa(Mapa *mapa);
@@ -236,8 +236,16 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
 
             // 1. Desenha Pacman
             if (mapa->pacman.pos.x == x && mapa->pacman.pos.y == y) {
-                DesenharSpriteOuForma(sprites->pacman, px, py, YELLOW, 1, 1.0f, WHITE, tamanhoBloco);
-                continue; 
+                float angulo = 0.0f;
+
+                //rotação
+                if (mapa->pacman.dir.x == 1) angulo = 0.0f;        // Direita
+                else if (mapa->pacman.dir.x == -1) angulo = 180.0f; // Esquerda
+                else if (mapa->pacman.dir.y == 1) angulo = 90.0f;   // Baixo
+                else if (mapa->pacman.dir.y == -1) angulo = 270.0f; // Cima
+
+                DesenharSpriteOuForma(sprites->pacman, px, py, YELLOW, 1, 1.0f, WHITE, tamanhoBloco, angulo);
+                continue;
             }
             
             // 2. Desenha Fantasmas
@@ -260,7 +268,7 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
                         }
                     }
 
-                    DesenharSpriteOuForma(sprites->fantasma, px, py, corFantasma, 1, 1.0f, tintSprite, tamanhoBloco);
+                    DesenharSpriteOuForma(sprites->fantasma, px, py, corFantasma, 1, 1.0f, tintSprite, tamanhoBloco, 0.0f);
                     temFantasma = true;
                     break; 
                 }
@@ -270,14 +278,12 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
 
 
             switch (tile) {
-                case '#': DesenharSpriteOuForma(sprites->parede, px, py, BLUE, 0, 1.0f, WHITE, tamanhoBloco); break;
-                case '.': DesenharSpriteOuForma(sprites->pastilha, px, py, WHITE, 1, 0.2f, WHITE, tamanhoBloco); break;
-                case 'o': DesenharSpriteOuForma(sprites->superPastilha, px, py, GREEN, 1, 0.6f, WHITE, tamanhoBloco); break;
-                case '+': DesenharSpriteOuForma(sprites->superPastilha, px, py, GOLD, 1, 0.6f, GOLD, tamanhoBloco); break;
-                case 'T': DesenharSpriteOuForma(sprites->portal, px, py, PINK, 0, 1.0f, WHITE, tamanhoBloco); break;
-                case 'S': 
-                    DrawText("s", px + (tamanhoBloco/4), py + (tamanhoBloco/4), tamanhoBloco/2, DARKGRAY);
-                    break;
+                case '#': DesenharSpriteOuForma(sprites->parede, px, py, BLUE, 0, 1.0f, WHITE, tamanhoBloco, 0.0f); break;
+                case '.': DesenharSpriteOuForma(sprites->pastilha, px, py, WHITE, 1, 0.2f, WHITE, tamanhoBloco, 0.0f); break;
+                case 'o': DesenharSpriteOuForma(sprites->superPastilha, px, py, GREEN, 1, 0.6f, WHITE, tamanhoBloco, 0.0f); break;
+                case '+': DesenharSpriteOuForma(sprites->superPastilha, px, py, GOLD, 1, 0.6f, GOLD, tamanhoBloco, 0.0f); break;
+                case 'T': DesenharSpriteOuForma(sprites->portal, px, py, PINK, 0, 1.0f, WHITE, tamanhoBloco, 0.0f); break;
+                case 'S': DrawText("s", px + (tamanhoBloco/4), py + (tamanhoBloco/4), tamanhoBloco/2, DARKGRAY); break;
             }
         }
     }
@@ -321,17 +327,31 @@ void FloodFill(Mapa *mapa, int x, int y, int **visited) {
     }
 }
 
-void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo, float escala, Color tint, int tamanhoBloco) {
+void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo, float escala, Color tint, int tamanhoBloco, float rotacao) {
+
+float meioBloco = tamanhoBloco / 2.0f;
+
     if (tex.id > 0) {
         Rectangle fonte = { 0.0f, 0.0f, (float)tex.width, (float)tex.height };
-        Rectangle destino = { (float)x, (float)y, (float)tamanhoBloco, (float)tamanhoBloco };
-        // Se tiver tint (cor diferente de WHITE), aplica na textura
-        DrawTexturePro(tex, fonte, destino, (Vector2){0,0}, 0.0f, tint);
+
+        Rectangle destino = { 
+            (float)x + meioBloco, 
+            (float)y + meioBloco, 
+            (float)tamanhoBloco, 
+            (float)tamanhoBloco 
+        };
+
+        // 3. Pivô: Dizemos que o "centro de gravidade" da imagem é o meio dela.
+        // Assim, quando girar, ela gira igual um pião, e não igual uma porta.
+        Vector2 origin = { meioBloco, meioBloco };
+
+        DrawTexturePro(tex, fonte, destino, origin, rotacao, tint);
     } else {
-        int cx = x + tamanhoBloco / 2;
-        int cy = y + tamanhoBloco / 2;
+        int cx = x + (int)meioBloco;
+        int cy = y + (int)meioBloco;
+        float raio = (meioBloco - 2) * escala;
         if (ehCirculo) {
-            DrawCircle(cx, cy, (tamanhoBloco/2.0f - 2)*escala, cor);
+            DrawCircle(cx, cy, raio, cor);
         } else {
             DrawRectangle(x, y, tamanhoBloco, tamanhoBloco, cor);
             if (cor.r == BLUE.r) DrawRectangleLines(x, y, tamanhoBloco, tamanhoBloco, DARKBLUE);
