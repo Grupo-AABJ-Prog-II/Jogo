@@ -2,6 +2,7 @@
 #include <raylib.h>
 #include "tipos.h"
 
+
 bool DrawClickableText(const char *text, int x, int y, int fontSize, Color colorNormal, Color colorHover) {
     int textWidth = MeasureText(text, fontSize);
     Rectangle bounds = { (float)x, (float)y, (float)textWidth, (float)fontSize };
@@ -22,10 +23,8 @@ bool DrawClickableText(const char *text, int x, int y, int fontSize, Color color
 }
 
 void SetGameResolution(int width, int height) {
-    // 1. Aplica o novo tamanho
     SetWindowSize(width, height);
     
-    // 2. Centraliza a janela no monitor do usuário
     int monitor = GetCurrentMonitor();
     int monitorW = GetMonitorWidth(monitor);
     int monitorH = GetMonitorHeight(monitor);
@@ -37,7 +36,6 @@ void SetGameResolution(int width, int height) {
 
 void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
     int textWidth = MeasureText(text, fontSize);
-    // Fórmula do centro: (LarguraDaTela - LarguraDoTexto) / 2
     int x = (GetScreenWidth() - textWidth) / 2; 
     DrawText(text, x, y, fontSize, color);
 }
@@ -45,10 +43,9 @@ void DrawCenteredText(const char* text, int y, int fontSize, Color color) {
 bool DrawCenteredButton(const char* text, int y, int fontSize, Color normal, Color hover) {
     int textWidth = MeasureText(text, fontSize);
     int x = (GetScreenWidth() - textWidth) / 2;
-    
-    // Reaproveita sua lógica de botão, mas com o X calculado
     return DrawClickableText(text, x, y, fontSize, normal, hover);
 }
+
 
 Tela tela_menu_principal() {
     DrawCenteredText("MENU PRINCIPAL", 100, 40, YELLOW);
@@ -56,11 +53,17 @@ Tela tela_menu_principal() {
     if (DrawCenteredButton("Novo Jogo", 250, 30, WHITE, GREEN))
         return TELA_JOGO;
     
-    // Botão que leva para as opções de vídeo
-    if (DrawCenteredButton("Opcoes de Video", 300, 30, WHITE, BLUE))
+    // Opção para Carregar Jogo (tecla C)
+    if (DrawCenteredButton("Carregar Jogo (C)", 300, 30, WHITE, GREEN)) {
+        // A lógica de carregar o binário fica no main loop (pequemen.c)
+        // Aqui apenas indicamos visualmente, mas o input é tratado lá ou retornamos um estado específico se quisermos
+        // Por enquanto, vamos manter simples e deixar o main tratar a tecla 'C' globalmente ou retornar TELA_JOGO se for novo
+    }
+    
+    if (DrawCenteredButton("Opcoes de Video", 350, 30, WHITE, BLUE))
         return TELA_RESOLUCAO_MENU_PRINCIPAL;
 
-    if (DrawCenteredButton("Sair", 350, 30, LIGHTGRAY, RED))
+    if (DrawCenteredButton("Sair", 400, 30, LIGHTGRAY, RED))
         return TELA_SAIR;
 
     return TELA_MENU_PRINCIPAL;
@@ -84,40 +87,40 @@ Tela tela_resolucao_menu_principal(int *tamanho_bloco) {
         SetGameResolution(*tamanho_bloco * 40, *tamanho_bloco * 21);
     }
 
-    // Voltar
     if (DrawCenteredButton("Voltar", 450, 30, GRAY, WHITE))
         return TELA_MENU_PRINCIPAL;
     
-    // Mostra resolução atual no rodapé
     DrawText(TextFormat("%dx%d", GetScreenWidth(), GetScreenHeight()), 10, GetScreenHeight() - 20, 10, DARKGRAY);
 
     return TELA_RESOLUCAO_MENU_PRINCIPAL;
 }
 
 Tela tela_menu() {
-    // --- TÍTULO CENTRALIZADO ---
     DrawCenteredText("PAUSA", 50, 40, YELLOW);
 
-    int startY = 150;     // Altura inicial dos botões
-    int spacing = 50;     // Espaço entre eles
+    int startY = 150;
+    int spacing = 50;
     int fontSize = 20;
     
-    //Lógica dos botões
-    if (IsKeyPressed(KEY_N)) { return TELA_MENU_PRINCIPAL; } // Ajustado para voltar ao menu principal que reinicia
-    if (IsKeyPressed(KEY_C)) { return TELA_JOGO; }
-    if (IsKeyPressed(KEY_S)) { return TELA_SAIR; } // Salvar nao implementado aqui, entao sair
-    if (IsKeyPressed(KEY_Q)) { return TELA_SAIR; }
-    if (IsKeyPressed(KEY_V)) { return TELA_JOGO; }
+    // Atalhos de teclado
+    if (IsKeyPressed(KEY_N)) return TELA_MENU_PRINCIPAL; 
+    if (IsKeyPressed(KEY_C)) return TELA_JOGO;
+    if (IsKeyPressed(KEY_S)) return TELA_SAIR; // Salvar e Sair (se implementado)
+    if (IsKeyPressed(KEY_Q)) return TELA_SAIR;
+    if (IsKeyPressed(KEY_V)) return TELA_JOGO;
     
-    // --- BOTÕES CENTRALIZADOS ---
+    // Botões
     if (DrawCenteredButton("Continuar Jogo (C)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
 
-    // A opção "Novo Jogo" aqui poderia levar ao Menu Principal para resetar
-    if (DrawCenteredButton("Menu Principal (N)", startY + spacing, fontSize, WHITE, BLUE))
+    // Botões visuais para Salvar/Carregar (a lógica real está no main loop)
+    DrawCenteredText("Pressione 'S' para Salvar", startY + spacing, 20, LIGHTGRAY);
+    DrawCenteredText("Pressione 'C' para Carregar", startY + spacing * 2, 20, LIGHTGRAY);
+
+    if (DrawCenteredButton("Menu Principal (N)", startY + spacing * 3, fontSize, WHITE, BLUE))
         return TELA_MENU_PRINCIPAL;
 
-    if (DrawCenteredButton("Sair do Jogo (Q)", startY + spacing * 2, fontSize, WHITE, RED))
+    if (DrawCenteredButton("Sair do Jogo (Q)", startY + spacing * 4, fontSize, WHITE, RED))
         return TELA_SAIR;
 
     return TELA_MENU;
@@ -125,7 +128,6 @@ Tela tela_menu() {
 
 Tela tela_gameover(int pontuacaoFinal) {
     DrawCenteredText("GAME OVER", 100, 60, RED);
-    
     DrawCenteredText(TextFormat("Pontuacao Final: %d", pontuacaoFinal), 200, 30, WHITE);
 
     if (DrawCenteredButton("Voltar ao Menu", 350, 30, GRAY, WHITE)) {
@@ -140,13 +142,27 @@ Tela tela_gameover(int pontuacaoFinal) {
 }
 
 Tela tela_vitoria(int pontuacaoFinal) {
-    DrawCenteredText("VITORIA!", 100, 60, GREEN);
+    DrawCenteredText("NIVEL CONCLUIDO!", 100, 60, GREEN);
+    DrawCenteredText(TextFormat("Pontuacao: %d", pontuacaoFinal), 200, 30, WHITE);
     
-    DrawCenteredText(TextFormat("Pontuacao Final: %d", pontuacaoFinal), 200, 30, WHITE);
+    // Esta tela serve como transição, não precisa de botão se for automático,
+    // mas se quiser pausar entre níveis:
+    if (DrawCenteredButton("Continuar", 350, 30, WHITE, GREEN)) {
+        // O retorno aqui não importa tanto se a lógica de troca de nível for automática no main loop
+        // Mas podemos usar para voltar ao jogo
+        return TELA_JOGO; 
+    }
+
+    return TELA_VITORIA;
+}
+
+Tela tela_vitoria_final(int pontuacaoFinal) {
+    DrawCenteredText("PARABENS! VOCE ZEROU O JOGO!", 100, 60, GOLD);
+    DrawCenteredText(TextFormat("Pontuacao Total: %d", pontuacaoFinal), 200, 30, WHITE);
 
     if (DrawCenteredButton("Voltar ao Menu", 350, 30, GRAY, WHITE)) {
         return TELA_MENU_PRINCIPAL;
     }
 
-    return TELA_VITORIA;
+    return TELA_VITORIA_FINAL;
 }

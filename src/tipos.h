@@ -2,19 +2,17 @@
 #define TIPOS_H
 
 #include <raylib.h>
+#include <stdbool.h>
 
 typedef enum Tela {
-    // Fecha o jogo
     TELA_SAIR,
-
     TELA_MENU_PRINCIPAL,
     TELA_RESOLUCAO_MENU_PRINCIPAL,
-
     TELA_MENU,
-
     TELA_JOGO,
     TELA_GAMEOVER,
-    TELA_VITORIA
+    TELA_VITORIA,
+    TELA_VITORIA_FINAL
 } Tela;
 
 typedef struct {
@@ -23,10 +21,11 @@ typedef struct {
 } Posicao;
 
 typedef struct {
-    Posicao pos;        // Usando a struct Posicao do mapa.h
-    Posicao dir;        // Direção atual (dx, dy)
-    Posicao proxDir;    // Buffer de input
-    Posicao spawnPos;   // Onde renasce
+    Posicao pos;        // Posição Lógica (Grade)
+    Vector2 pixelPos;   // Posição Visual (Pixels)
+    Posicao dir;
+    Posicao proxDir;
+    Posicao spawnPos;
     double moveTimer;
     int score;
     int vidas;
@@ -34,31 +33,33 @@ typedef struct {
 
 typedef struct {
     Posicao pos;
-    Posicao spawnPosOriginal; // [NOVO] Guarda o spawn inicial para resetar fase
+    Vector2 pixelPos;   // Posição Visual
+    Posicao spawnPosOriginal;
     double moveTimer;
     double tempoVulneravel;
     bool estaVulneravel;
 } Fantasma;
 
-
 typedef struct {
-    char **grade;// Matriz dinâmica
+    char **grade;
     int linhas;
     int colunas;
-    Posicao *portais; // Vetor dinâmico
-    int *conexoes; // Vetor dinâmico de IDs
+    
+    Posicao *portais;
+    int *conexoes;
     int qtdPortais;
 
     Pacman pacman;
     Fantasma *fantasmas;
     int numero_fantasmas;
     
-    // Estatísticas e Spawn Distante
     Posicao spawnFantasma; 
     int temSpawn;
-    
     int qtdPointPellets;
-    int totalPellets;
+    
+    // --- Controle de Estado ---
+    int nivelAtual;
+    bool jogoIniciado; // True se o player já moveu
 } Mapa;
 
 typedef struct {

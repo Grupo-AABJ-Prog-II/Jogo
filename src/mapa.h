@@ -1,31 +1,27 @@
 #ifndef MAPA_H
 #define MAPA_H
 
-//mapa no geral
-Mapa* CarregarMapa(const char *nomeArquivo);
+#include "tipos.h"
 
-// Limpa memória (importante!)
+// Carrega um nível específico (ex: 1 procura "mapa1.txt")
+Mapa* CarregarMapaNivel(int nivel);
+
 void LiberarMapa(Mapa *mapa);
-
-// Carrega as imagens
 void CarregarSprites(Sprites *sprites);
 void DescarregarSprites(Sprites *sprites);
 
-// Função de desenho que se adapta ao tamanho do bloco
+// Desenha o mapa e entidades
 void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco);
 
-// Auxiliares úteis para a movimentação
 double CalcularDistancia(Posicao p1, Posicao p2);
 
-// Funções de Save/Load e Utilitários (adicionar mais depois?)
+// --- SISTEMA DE SAVE/LOAD ---
+// Salva o estado completo do jogo em binário
+bool SalvarJogo(Mapa *mapa, const char *nomeArquivo);
 
-// Salva o jogo completo
-int SalvarEstadoMapa(Mapa *mapa, const char *nomeArquivo, Posicao pacmanAtual, Posicao *fantasmas, int qtdFantasmas);
+// Carrega o estado completo do jogo
+Mapa* CarregarJogo(const char *nomeArquivo);
 
-// Carrega o jogo salvo e retorna posições dinâmicas via ponteiros
-Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **outFantasmas, int *outQtdFantasmas);
-
-// Verifica condição de vitória
 int ContarPastilhasRestantes(Mapa *mapa);
 
 #endif
