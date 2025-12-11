@@ -53,9 +53,8 @@ bool DrawCenteredButton(const char* text, int y, int fontSize, Color normal, Col
 Tela tela_menu_principal() {
     DrawCenteredText("MENU PRINCIPAL", 100, 40, YELLOW);
 
-    if (DrawCenteredButton("Novo Jogo", 250, 30, WHITE, GREEN)) {
-        // Iniciar jogo...
-    }
+    if (DrawCenteredButton("Novo Jogo", 250, 30, WHITE, GREEN))
+        return TELA_JOGO;
     
     // Botão que leva para as opções de vídeo
     if (DrawCenteredButton("Opcoes de Video", 300, 30, WHITE, BLUE))
