@@ -59,7 +59,7 @@ int main(void) {
             DesenharMapa(mapaAtual, &sprites, tamanho_bloco);
             DesenharHUD(&stats, tamanho_bloco * 40, tamanho_bloco * 21, tamanho_bloco);
 
-            AtualizarJogo(mapaAtual);
+            tela = AtualizarJogo(mapaAtual);
             if (IsKeyPressed(KEY_TAB))
                 tela = TELA_MENU;
             break;

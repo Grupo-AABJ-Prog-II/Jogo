@@ -12,7 +12,9 @@ typedef enum Tela {
 
     TELA_MENU,
 
-    TELA_JOGO
+    TELA_JOGO,
+    TELA_GAMEOVER,
+    TELA_VITORIA
 } Tela;
 
 typedef struct {

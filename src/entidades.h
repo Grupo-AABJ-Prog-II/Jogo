@@ -10,12 +10,6 @@
 #define VELOCIDADE_NORMAL 0.25f // Menor = Mais rápido (segundos por bloco)
 #define VELOCIDADE_LENTA 0.33f  
 
-typedef enum {
-    ESTADO_JOGANDO,
-    ESTADO_GAMEOVER,
-    ESTADO_VITORIA
-} GameState;
-
-GameState AtualizarJogo(Mapa *mapa);
+Tela AtualizarJogo(Mapa *mapa);
 
 #endif

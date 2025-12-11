@@ -126,29 +126,28 @@ void Respawn(Mapa *m) {
     m->pacman.moveTimer = 0;
 }
 
-void Colisao(Mapa *mapa, int i) {
+bool Colisao(Mapa *mapa, int i) {
     if (mapa->fantasmas[i].estaVulneravel) {
         mapa->pacman.score += 200;
 
         memmove(&mapa->fantasmas[i], &mapa->fantasmas[i + 1], mapa->numero_fantasmas - i - 1);
         mapa->numero_fantasmas--;
-    } else {
-        mapa->pacman.vidas--;
-        mapa->pacman.score -= 200; 
-        if (mapa->pacman.score < 0) mapa->pacman.score = 0;
-        
-        if (mapa->pacman.vidas > 0) {
-            Respawn(mapa);
-            
-            return; 
-        } else {
-            //return ESTADO_GAMEOVER;
-            return;
-        }
+        return false;
     }
+    mapa->pacman.vidas--;
+    mapa->pacman.score -= 200; 
+    if (mapa->pacman.score < 0) mapa->pacman.score = 0;
+    
+    if (mapa->pacman.vidas > 0) {
+        Respawn(mapa);
+        
+        return false;
+    }
+
+    return true;
 }
 
-GameState AtualizarJogo(Mapa *mapa) {
+Tela AtualizarJogo(Mapa *mapa) {
     if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) mapa->pacman.proxDir = (Posicao){1, 0};
     else if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A))  mapa->pacman.proxDir = (Posicao){-1, 0};
     else if (IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S))  mapa->pacman.proxDir = (Posicao){0, 1};
@@ -239,14 +238,21 @@ GameState AtualizarJogo(Mapa *mapa) {
         }
         
         if (pac->pos.x == f->pos.x && pac->pos.y == f->pos.y) {
-            Colisao(mapa, i);
-            break;
+            if (Colisao(mapa, i))
+                return TELA_GAMEOVER;
         }
     }
 
-    // TODO: reviver
-    //if (ContarPastilhasRestantes(mapa) == 0) return ESTADO_VITORIA;
+    int pellets = 0;
 
-    return ESTADO_JOGANDO;
+    for (int y = 0; y < 20; y++)
+        for (int x = 0; x < 40; x++)
+            if (mapa->grade[y][x] == '.' || mapa->grade[y][x] == 'o')
+                pellets++;
+
+    if (pellets == 0)
+        return TELA_VITORIA;
+
+    return TELA_JOGO;
 }
 
