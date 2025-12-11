@@ -104,8 +104,6 @@ Tela tela_menu() {
     
     // Atalhos de teclado
     if (IsKeyPressed(KEY_N)) return TELA_MENU_PRINCIPAL; 
-    if (IsKeyPressed(KEY_C)) return TELA_JOGO;
-    if (IsKeyPressed(KEY_S)) return TELA_SAIR; // Salvar e Sair (se implementado)
     if (IsKeyPressed(KEY_Q)) return TELA_SAIR;
     if (IsKeyPressed(KEY_V)) return TELA_JOGO;
     
@@ -167,3 +165,4 @@ Tela tela_vitoria_final(int pontuacaoFinal) {
     return TELA_VITORIA_FINAL;
 
 }
+
