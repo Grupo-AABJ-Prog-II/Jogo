@@ -63,6 +63,15 @@ int main(void) {
             if (IsKeyPressed(KEY_TAB))
                 tela = TELA_MENU;
             break;
+        case TELA_GAMEOVER:
+            DrawText("GAME OVER!", 100, 200, 40, RED);
+            if (IsKeyPressed(KEY_R)) tela = TELA_MENU_PRINCIPAL;
+            break;
+
+        case TELA_VITORIA:
+            DrawText("VOCÊ VENCEU!", 100, 200, 40, GREEN);
+            if (IsKeyPressed(KEY_R)) tela = TELA_MENU_PRINCIPAL;
+            break;
         }
 
         EndDrawing();
