@@ -107,7 +107,7 @@ Tela tela_menu() {
 
     int startY = 150;     // Altura inicial dos botões
     int spacing = 50;     // Espaço entre eles
-    int fontSize = 20
+    int fontSize = 20;
     
     //Lógica dos botões
     if (IsKeyPressed(KEY_N)) { return TELA_JOGO; }
