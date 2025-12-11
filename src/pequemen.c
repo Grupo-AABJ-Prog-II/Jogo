@@ -50,9 +50,15 @@ int main(void) {
             tela = tela_resolucao_menu_principal(&tamanho_bloco);
             break;
 
+        case TELA_MENU:
+            tela = tela_menu();
+            break;
+
         case TELA_JOGO:
             DesenharMapa(mapaAtual, &sprites, tamanho_bloco);
             DesenharHUD(&stats, tamanho_bloco * 40, tamanho_bloco * 21, tamanho_bloco);
+            if (IsKeyPressed(KEY_TAB))
+                tela = TELA_MENU;
             break;
         }
 

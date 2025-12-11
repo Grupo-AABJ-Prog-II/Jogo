@@ -5,6 +5,8 @@ typedef enum Tela {
     TELA_MENU_PRINCIPAL,
     TELA_RESOLUCAO_MENU_PRINCIPAL,
 
-    TELA_JOGO,
+    TELA_MENU,
+
+    TELA_JOGO
 } Tela;
 

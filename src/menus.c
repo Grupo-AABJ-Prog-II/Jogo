@@ -94,3 +94,49 @@ Tela tela_resolucao_menu_principal(int *tamanho_bloco) {
     return TELA_RESOLUCAO_MENU_PRINCIPAL;
 }
 
+Tela tela_menu() {
+    // Desenha o fundo esticado para caber na tela se ela mudar de tamanho
+    /*DrawTexturePro(menuBackground, 
+                   (Rectangle){0, 0, menuBackground.width, menuBackground.height},
+                   (Rectangle){0, 0, GetScreenWidth(), GetScreenHeight()},
+                   (Vector2){0, 0}, 0.0f, WHITE);*/
+
+    // --- TÍTULO CENTRALIZADO ---
+    // Não usamos mais X=50, apenas a altura Y=50
+    DrawCenteredText("2.10. Menu de Opcoes:", 50, 40, YELLOW);
+
+    int startY = 150;     // Altura inicial dos botões
+    int spacing = 50;     // Espaço entre eles
+    int fontSize = 20;
+
+    // --- BOTÕES CENTRALIZADOS ---
+    // Substituímos DrawClickableText por DrawCenteredButton
+    // Note que o argumento 'X' sumiu.
+    
+    if (DrawCenteredButton("- Novo Jogo (N)", startY, fontSize, WHITE, GREEN)) {
+        // TODO
+        //InitNewGame(&gameState);
+        return TELA_JOGO;
+    }
+
+    if (DrawCenteredButton("- Carregar jogo (C)", startY + spacing, fontSize, WHITE, GREEN))
+        // TODO
+        //if (LoadGameBinary(&gameState))
+            return TELA_JOGO;
+
+    if (DrawCenteredButton("- Salvar jogo (S)", startY + spacing * 2, fontSize, WHITE, GREEN))
+        // TODO
+        // SaveGameBinary(&gameState);
+        ;
+
+    if (DrawCenteredButton("- Sair do jogo (Q)", startY + spacing * 3, fontSize, WHITE, GREEN))
+        return TELA_SAIR;
+
+    if (DrawCenteredButton("- Voltar (V)", startY + spacing * 4, fontSize, WHITE, GREEN))
+        return TELA_JOGO;
+
+    DrawCenteredText("(Mouse ou Teclado)", startY + spacing * 6, 20, LIGHTGRAY);
+
+    return TELA_MENU;
+}
+
