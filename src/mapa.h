@@ -1,39 +1,6 @@
 #ifndef MAPA_H
 #define MAPA_H
 
-#include "raylib.h"
-
-// Estruturas
-typedef struct {
-    int x;
-    int y;
-} Posicao;
-
-typedef struct {
-    char **grade;// Matriz dinâmica
-    int linhas;
-    int colunas;
-    Posicao inicioPacman;
-    Posicao spawnFantasma;
-    int temSpawn;
-    Posicao *portais; // Vetor dinâmico
-    int *conexoes; // Vetor dinâmico de IDs
-    int qtdPortais;
-    
-    // Estatísticas
-    int qtdPointPellets;
-    int totalPellets;// Total de itens para comer (. + o + +)
-} Mapa;
-
-typedef struct {
-    Texture2D parede;
-    Texture2D pastilha;
-    Texture2D superPastilha;
-    Texture2D pacman;
-    Texture2D fantasma;
-    Texture2D portal;
-} Sprites;
-
 //mapa no geral
 Mapa* CarregarMapa(const char *nomeArquivo);
 

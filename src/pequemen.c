@@ -7,6 +7,7 @@
 #include "menus.h"
 #include "mapa.h"
 #include "hud.h"
+#include "entidades.h"
 
 
 int main(void) {
@@ -57,6 +58,8 @@ int main(void) {
         case TELA_JOGO:
             DesenharMapa(mapaAtual, &sprites, tamanho_bloco);
             DesenharHUD(&stats, tamanho_bloco * 40, tamanho_bloco * 21, tamanho_bloco);
+
+            AtualizarJogo(mapaAtual);
             if (IsKeyPressed(KEY_TAB))
                 tela = TELA_MENU;
             break;

@@ -1,9 +1,10 @@
-#include "mapa.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h> // Para strlen e strcspn
 #include <time.h>   // Para o rand()
+
+#include "tipos.h"
 
 // Declarações locais
 void TentarGerarPointPellets(Mapa *mapa);
@@ -11,6 +12,7 @@ void CalcularSpawnDistante(Mapa *mapa);
 void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo, float escala, Color tint, int tamanhoBloco);
 void ConectarPortais(Mapa *mapa);
 void FloodFill(Mapa *mapa, int x, int y, int **visited); 
+void LiberarMapa(Mapa *mapa);
 
 
 Mapa* CarregarMapa(const char *nomeArquivo) {
@@ -28,6 +30,16 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
     for (int i = 0; i < mapa->linhas; i++) {
         mapa->grade[i] = malloc((mapa->colunas + 2) * sizeof(char));
     }
+
+    mapa->pacman.dir.x = 0;
+    mapa->pacman.dir.y = 0;
+    mapa->pacman.proxDir = mapa->pacman.dir;
+    mapa->pacman.score = 0;
+    mapa->pacman.vidas = 3;
+    mapa->pacman.moveTimer = 0;
+
+    mapa->numero_fantasmas = 0;
+    mapa->fantasmas = NULL;
 
     char linha[256]; 
     int l = 0;
@@ -60,8 +72,12 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
             mapa->grade[l][c] = ch;
             
             if (ch == 'P') { 
-                mapa->inicioPacman.x = c; 
-                mapa->inicioPacman.y = l; 
+                mapa->pacman.spawnPos.x = c;
+                mapa->pacman.spawnPos.y = l;
+                mapa->pacman.pos = mapa->pacman.spawnPos;
+
+                mapa->grade[l][c] = '.';
+
                 pacmanCount++; 
             }
             if (ch == 'T') {
@@ -69,6 +85,19 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
                 mapa->portais = (Posicao *)realloc(mapa->portais, mapa->qtdPortais * sizeof(Posicao));
                 mapa->portais[mapa->qtdPortais - 1].x = c;
                 mapa->portais[mapa->qtdPortais - 1].y = l;
+            }
+            if (ch == 'F') {
+                mapa->grade[l][c] = '.';
+
+                mapa->numero_fantasmas++;
+                mapa->fantasmas = realloc(mapa->fantasmas, mapa->numero_fantasmas * sizeof(Fantasma));
+
+                mapa->fantasmas[mapa->numero_fantasmas - 1].pos.x = c;
+                mapa->fantasmas[mapa->numero_fantasmas - 1].pos.y = l;
+
+                mapa->fantasmas[mapa->numero_fantasmas - 1].moveTimer = 0;
+                mapa->fantasmas[mapa->numero_fantasmas - 1].tempoVulneravel = 0;
+                mapa->fantasmas[mapa->numero_fantasmas - 1].estaVulneravel = false;
             }
             if (ch == '+') mapa->qtdPointPellets++;
         }
@@ -107,7 +136,6 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
     }
     
     TentarGerarPointPellets(mapa);
-    CalcularSpawnDistante(mapa);
 
     /*Aqui inicia a logica do flood fill, a função recursiva está um pouco mais abaixo no codigo, mas basicamente
      ele é utilizado aqui para validar a jogabilidade do mapa. Ele simula o movimento do Pac-Man a partir de sua posição
@@ -121,7 +149,7 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
     }
 
     // Inicia a "tinta" a partir do Pac-Man
-    FloodFill(mapa, mapa->inicioPacman.x, mapa->inicioPacman.y, visited);
+    FloodFill(mapa, mapa->pacman.spawnPos.x, mapa->pacman.spawnPos.y, visited);
 
     int mapaImpossivel = 0;
     
@@ -151,6 +179,8 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
     return mapa;
 }
 
+
+
 // --- Novas Funções para Suporte ao Jogo (Save/Load Completo) ---
 
 // Conta quantas pastilhas restam no mapa para verificar vitoria
@@ -167,6 +197,7 @@ int ContarPastilhasRestantes(Mapa *mapa) {
     return count;
 }
 
+/*
 // Agora recebe a posição ATUAL do Pacman e a lista de Fantasmas para salvar no binário
 int SalvarEstadoMapa(Mapa *mapa, const char *nomeArquivo, Posicao pacmanAtual, Posicao *fantasmas, int qtdFantasmas) {
     FILE *file = fopen(nomeArquivo, "wb");
@@ -175,9 +206,7 @@ int SalvarEstadoMapa(Mapa *mapa, const char *nomeArquivo, Posicao pacmanAtual, P
     // 1. Salva dados do Mapa (Grade, Spawns, Quantidades)
     fwrite(&mapa->linhas, sizeof(int), 1, file);
     fwrite(&mapa->colunas, sizeof(int), 1, file);
-    fwrite(&mapa->inicioPacman, sizeof(Posicao), 1, file);
-    fwrite(&mapa->spawnFantasma, sizeof(Posicao), 1, file);
-    fwrite(&mapa->temSpawn, sizeof(int), 1, file);
+    // TODO: salvar pacmans e fantasmos
     fwrite(&mapa->qtdPortais, sizeof(int), 1, file);
     fwrite(&mapa->qtdPointPellets, sizeof(int), 1, file);
 
@@ -213,9 +242,6 @@ Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **
     // 1. Lê dados básicos
     fread(&mapa->linhas, sizeof(int), 1, file);
     fread(&mapa->colunas, sizeof(int), 1, file);
-    fread(&mapa->inicioPacman, sizeof(Posicao), 1, file);
-    fread(&mapa->spawnFantasma, sizeof(Posicao), 1, file);
-    fread(&mapa->temSpawn, sizeof(int), 1, file);
     fread(&mapa->qtdPortais, sizeof(int), 1, file);
     fread(&mapa->qtdPointPellets, sizeof(int), 1, file);
 
@@ -260,6 +286,7 @@ Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **
     fclose(file);
     return mapa;
 }
+*/
 
 void LiberarMapa(Mapa *mapa) {
     if (!mapa) return;
@@ -267,6 +294,7 @@ void LiberarMapa(Mapa *mapa) {
     free(mapa->grade);
     if (mapa->portais) free(mapa->portais);
     if (mapa->conexoes) free(mapa->conexoes);
+    if (mapa->fantasmas) free(mapa->fantasmas);
     free(mapa);
 }
 
@@ -295,13 +323,27 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
             int py = y * tamanhoBloco;
             char tile = mapa->grade[y][x];
 
+            if (mapa->pacman.pos.x == x && mapa->pacman.pos.y == y) {
+                DesenharSpriteOuForma(sprites->pacman, px, py, YELLOW, 1, 1.0f, WHITE, tamanhoBloco);
+                continue;
+            }
+            bool f = false;
+            for (int i = 0; i < mapa->numero_fantasmas; i++) {
+                if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y) {
+                    DesenharSpriteOuForma(sprites->fantasma, px, py, RED, 1, 1.0f, WHITE, tamanhoBloco);
+                    f = true;
+                    break;
+                }
+            }
+            if (f)
+                continue;
+
+
             switch (tile) {
                 case '#': DesenharSpriteOuForma(sprites->parede, px, py, BLUE, 0, 1.0f, WHITE, tamanhoBloco); break;
                 case '.': DesenharSpriteOuForma(sprites->pastilha, px, py, WHITE, 1, 0.2f, WHITE, tamanhoBloco); break;
                 case 'o': DesenharSpriteOuForma(sprites->superPastilha, px, py, GREEN, 1, 0.6f, WHITE, tamanhoBloco); break;
                 case '+': DesenharSpriteOuForma(sprites->superPastilha, px, py, GOLD, 1, 0.6f, GOLD, tamanhoBloco); break;
-                case 'P': DesenharSpriteOuForma(sprites->pacman, px, py, YELLOW, 1, 1.0f, WHITE, tamanhoBloco); break;
-                case 'F': DesenharSpriteOuForma(sprites->fantasma, px, py, RED, 1, 1.0f, WHITE, tamanhoBloco); break;
                 case 'T': DesenharSpriteOuForma(sprites->portal, px, py, PINK, 0, 1.0f, WHITE, tamanhoBloco); break;
                 case 'S': 
                     DrawText("s", px + (tamanhoBloco/4), py + (tamanhoBloco/4), tamanhoBloco/2, DARKGRAY);
@@ -431,20 +473,3 @@ void TentarGerarPointPellets(Mapa *mapa) {
     }
 }
 
-void CalcularSpawnDistante(Mapa *mapa) {
-    double distMax = -1.0;
-    Posicao melhorPos = {0, 0};
-    int achou = 0;
-    for (int y = 0; y < mapa->linhas; y++) {
-        for (int x = 0; x < mapa->colunas; x++) {
-            if (mapa->grade[y][x] == 'S') {
-                Posicao posAtual = {x, y};
-                double dist = CalcularDistancia(mapa->inicioPacman, posAtual);
-                if (dist > distMax) { distMax = dist; melhorPos = posAtual; }
-                achou = 1;
-            }
-        }
-    }
-    mapa->temSpawn = achou;
-    if (achou) mapa->spawnFantasma = melhorPos;
-}
