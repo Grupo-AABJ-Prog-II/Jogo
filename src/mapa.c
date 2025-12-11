@@ -181,7 +181,7 @@ Mapa* CarregarMapa(const char *nomeArquivo) {
 
 
 
-// --- Novas Funções para Suporte ao Jogo (Save/Load Completo) ---
+// Save/Load Completo
 
 // Conta quantas pastilhas restam no mapa para verificar vitoria
 int ContarPastilhasRestantes(Mapa *mapa) {
@@ -239,13 +239,13 @@ Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **
 
     Mapa *mapa = (Mapa*)malloc(sizeof(Mapa));
     
-    // 1. Lê dados básicos
+    // Lê dados básicos
     fread(&mapa->linhas, sizeof(int), 1, file);
     fread(&mapa->colunas, sizeof(int), 1, file);
     fread(&mapa->qtdPortais, sizeof(int), 1, file);
     fread(&mapa->qtdPointPellets, sizeof(int), 1, file);
 
-    // 2. Aloca e Lê a grade
+    // Aloca e Lê a grade
     mapa->grade = (char**)malloc(mapa->linhas * sizeof(char*));
     for (int i = 0; i < mapa->linhas; i++) {
         mapa->grade[i] = (char*)malloc((mapa->colunas + 2) * sizeof(char));
@@ -253,7 +253,7 @@ Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **
         mapa->grade[i][mapa->colunas] = '\0';
     }
 
-    // 3. Aloca e Lê Portais
+    // Aloca e Lê Portais
     mapa->portais = NULL;
     mapa->conexoes = NULL;
     if (mapa->qtdPortais > 0) {
@@ -264,7 +264,7 @@ Mapa* CarregarEstadoMapa(const char *nomeArquivo, Posicao *outPacman, Posicao **
         fread(mapa->conexoes, sizeof(int), mapa->qtdPortais, file);
     }
 
-    // 4. [NOVO] Lê as Posições Dinâmicas e retorna pelos ponteiros
+    // Lê as Posições Dinâmicas e retorna pelos ponteiros
     if (outPacman) {
         fread(outPacman, sizeof(Posicao), 1, file);
     } else {
@@ -409,48 +409,89 @@ void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo
 }
 
 // TODO: essa função não está complexa demais?
+/*Função para calcular a conexão dos portais. O numero de portais nunca pode ser ímpar. Caso haja mais de um par de portal, 
+o portal ira se conectar aquele que estiver na linha paralela a ele, no caso 
+a oposta, se tiver mais de um portal nessa linha, escolhe algum dos 2 aleatoriamente. 
+Se não houver portal na linha paralela, escolhe o mais distante, que nao esteja na mesma linha. 
+Se não há portal que esteja em outra linha a nao ser a que o proprio portal está, ele escolhe esse portal. 
+Um portal nao pode se conectar a outro portal que ja tenha um outro portal conectar. 
+Ou seja, se T1-T2, T3 nao poderá se conectar a T1 e nem a T2, pois eles ja tem um par
+*/
 void ConectarPortais(Mapa *mapa) {
+    // Aloca vetor de conexões (indice -> indice)
     mapa->conexoes = (int *)malloc(mapa->qtdPortais * sizeof(int));
-    for (int i = 0; i < mapa->qtdPortais; i++) mapa->conexoes[i] = -1;
+    
+    // Inicializa tudo como -1 (sem conexão)
+    for (int i = 0; i < mapa->qtdPortais; i++) {
+        mapa->conexoes[i] = -1;
+    }
 
     for (int i = 0; i < mapa->qtdPortais; i++) {
+        // Se este portal já tem par, pula
         if (mapa->conexoes[i] != -1) continue;
 
         int melhorPar = -1;
+        
+        // Linha Paralela Oposta
+        // Linha oposta em matriz 0-based é (Total - 1 - Y)
         int linhaOposta = (mapa->linhas - 1) - mapa->portais[i].y;
         
-        int *candidatosOpostos = (int *)malloc(mapa->qtdPortais * sizeof(int));
+        // Busca candidatos na linha oposta
+        int candidatosOpostos[mapa->qtdPortais];
         int qtdCandidatos = 0;
 
         for (int j = 0; j < mapa->qtdPortais; j++) {
+            // Ignora a si mesmo e portais já conectados
             if (i == j || mapa->conexoes[j] != -1) continue;
-            if (mapa->portais[j].y == linhaOposta) candidatosOpostos[qtdCandidatos++] = j;
+
+            if (mapa->portais[j].y == linhaOposta) {
+                candidatosOpostos[qtdCandidatos++] = j;
+            }
         }
 
+        // Se achou candidatos na linha oposta
         if (qtdCandidatos > 0) {
-            melhorPar = candidatosOpostos[rand() % qtdCandidatos];
-        } else {
+            // Escolhe aleatoriamente
+            int r = rand() % qtdCandidatos;
+            melhorPar = candidatosOpostos[r];
+        } 
+        else {
+            // Mais distante (não na mesma linha)
             double maxDist = -1.0;
             int candidatoDistante = -1;
+
             for (int j = 0; j < mapa->qtdPortais; j++) {
                 if (i == j || mapa->conexoes[j] != -1) continue;
+                
+                // Prioridade: Não estar na mesma linha
                 if (mapa->portais[j].y != mapa->portais[i].y) {
                     double dist = CalcularDistancia(mapa->portais[i], mapa->portais[j]);
-                    if (dist > maxDist) { maxDist = dist; candidatoDistante = j; }
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        candidatoDistante = j;
+                    }
                 }
             }
-            if (candidatoDistante != -1) melhorPar = candidatoDistante;
-            else {
+
+            if (candidatoDistante != -1) {
+                melhorPar = candidatoDistante;
+            } else {
+                // Sobrou apenas a mesma linha
+                // Escolhe o mais distante na mesma linha
                 maxDist = -1.0;
                 for (int j = 0; j < mapa->qtdPortais; j++) {
                     if (i == j || mapa->conexoes[j] != -1) continue;
+                    
                     double dist = CalcularDistancia(mapa->portais[i], mapa->portais[j]);
-                    if (dist > maxDist) { maxDist = dist; melhorPar = j; }
+                    if (dist > maxDist) {
+                        maxDist = dist;
+                        melhorPar = j;
+                    }
                 }
             }
         }
-        free(candidatosOpostos);
 
+        // Realiza a conexão mútua
         if (melhorPar != -1) {
             mapa->conexoes[i] = melhorPar;
             mapa->conexoes[melhorPar] = i;
