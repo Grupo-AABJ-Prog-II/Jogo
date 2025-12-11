@@ -107,8 +107,15 @@ Tela tela_menu() {
 
     int startY = 150;     // Altura inicial dos botões
     int spacing = 50;     // Espaço entre eles
-    int fontSize = 20;
-
+    int fontSize = 20
+    
+    //Lógica dos botões
+    if (IsKeyPressed(KEY_N)) { return TELA_JOGO; }
+    if (IsKeyPressed(KEY_C)) { return TELA_JOGO; }
+    if (IsKeyPressed(KEY_S)) { return TELA_SAIR; }
+    if (IsKeyPressed(KEY_Q)) { return TELA_SAIR; }
+    if (IsKeyPressed(KEY_V)) { return TELA_JOGO; }
+    
     // --- BOTÕES CENTRALIZADOS ---
     // Substituímos DrawClickableText por DrawCenteredButton
     // Note que o argumento 'X' sumiu.
