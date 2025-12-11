@@ -110,12 +110,12 @@ Tela tela_menu() {
     if (IsKeyPressed(KEY_V)) return TELA_JOGO;
     
     // Botões
-    if (DrawCenteredButton("Continuar Jogo (C)", startY, fontSize, WHITE, GREEN))
+    if (DrawCenteredButton("Voltar(V)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
 
     // Botões visuais para Salvar/Carregar (a lógica real está no main loop)
-    DrawCenteredText("Pressione 'S' para Salvar", startY + spacing, 20, LIGHTGRAY);
-    DrawCenteredText("Pressione 'C' para Carregar", startY + spacing * 2, 20, LIGHTGRAY);
+    DrawCenteredText("Salvar(S)", startY + spacing, 20, LIGHTGRAY);
+    DrawCenteredText("Carregar Save(C)", startY + spacing * 2, 20, LIGHTGRAY);
 
     if (DrawCenteredButton("Menu Principal (N)", startY + spacing * 3, fontSize, WHITE, BLUE))
         return TELA_MENU_PRINCIPAL;
@@ -165,4 +165,5 @@ Tela tela_vitoria_final(int pontuacaoFinal) {
     }
 
     return TELA_VITORIA_FINAL;
+
 }
