@@ -48,7 +48,7 @@ bool DrawCenteredButton(const char* text, int y, int fontSize, Color normal, Col
 
 
 Tela tela_menu_principal() {
-    DrawCenteredText("MENU PRINCIPAL", 100, 40, YELLOW);
+    DrawCenteredText("PEQUEMEN", 100, 40, YELLOW);
     if (IsKeyPressed(KEY_C))
         return CARREGAR;
     if (DrawCenteredButton("Carregar Jogo (C)", 300, 30, WHITE, GREEN))
