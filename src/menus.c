@@ -111,10 +111,11 @@ Tela tela_menu() {
     if (IsKeyPressed(KEY_Q)) return TELA_SAIR;
     if (IsKeyPressed(KEY_V)) return TELA_JOGO;
     if (IsKeyPressed(KEY_C)) return CARREGAR;
+    if (IsKeyPressed(KEY_S)) return SALVAR;
     // Botões
     if (DrawCenteredButton("Voltar(V)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
-    if(DrawCenteredButton("Salvar", startY + spacing, 20, LIGHTGRAY, DARKGREEN))
+    if(DrawCenteredButton("Salvar(S)", startY + spacing, 20, LIGHTGRAY, DARKGREEN))
         return SALVAR;
     
     if(DrawCenteredButton("Carregar Save(C)", startY + spacing * 2, 20, LIGHTGRAY, DARKGREEN))
@@ -170,5 +171,6 @@ Tela tela_vitoria_final(int pontuacaoFinal) {
     return TELA_VITORIA_FINAL;
 
 }
+
 
 
