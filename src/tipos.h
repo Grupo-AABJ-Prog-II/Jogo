@@ -14,7 +14,10 @@ typedef enum Tela {
     TELA_VITORIA,
     TELA_VITORIA_FINAL
 } Tela;
-
+typedef enum Comandos{
+    SALVAR,
+    CARREGAR
+} Comandos;
 typedef struct {
     int x;
     int y;
@@ -70,5 +73,6 @@ typedef struct {
     Texture2D fantasma;
     Texture2D portal;
 } Sprites;
+
 
 #endif
