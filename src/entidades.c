@@ -4,13 +4,13 @@
 #include <math.h>
 #include <raylib.h>
 #include <raymath.h> 
+#include <time.h>
 
 #include "entidades.h"
 
-enum Caminho { C_SEILA, C_UP, C_DOWN, C_LEFT, C_RIGHT };
+#define DIST(a, b) (((a) > (b)) ? ((a) - (b)) : ((b) - (a)))
 
-// [REMOVIDO] A função Vector2Lerp causava conflito.
-// Agora usamos a nativa da Raylib incluída em raymath.h
+enum Caminho { C_SEILA, C_UP, C_DOWN, C_LEFT, C_RIGHT };
 
 int PodeMoverF(int x, int y, Mapa *mapa) {
     if (x < 0 || x >= mapa->colunas || y < 0 || y >= mapa->linhas) return 0;
@@ -28,17 +28,86 @@ int PodeMoverP(int x, int y, Mapa *mapa) {
 }
 
 enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
-    if(atual.x < mapa->pacman.pos.x && PodeMoverF(atual.x+1, atual.y, mapa)) return C_RIGHT;
-    if(atual.x > mapa->pacman.pos.x && PodeMoverF(atual.x-1, atual.y, mapa)) return C_LEFT;
-    if(atual.y < mapa->pacman.pos.y && PodeMoverF(atual.x, atual.y+1, mapa)) return C_DOWN;
-    if(atual.y > mapa->pacman.pos.y && PodeMoverF(atual.x, atual.y-1, mapa)) return C_UP;
+    Posicao a_visitar[1000];
+    int tamanho_visitar = 0;
+
+    Posicao alvo;
+    alvo.x = mapa->pacman.pos.x;
+    alvo.y = mapa->pacman.pos.y;
+
+    if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > 5) {
+        alvo.x = ((time(NULL) / 10) * 1091235 + 12349) % 40;
+        alvo.y = ((time(NULL) / 10) * 4852183 + 1984) % 20;
+    }
+
+
+    enum Caminho visitado[20][40];
+
+    for (int y = 0; y < 20; y++)
+        for (int x = 0; x < 40; x++)
+            visitado[y][x] = C_SEILA;
+
+    if (atual.x == alvo.x && atual.y == alvo.y)
+        return C_UP;
     
-    int r = rand() % 4;
-    if(r==0 && PodeMoverF(atual.x+1, atual.y, mapa)) return C_RIGHT;
-    if(r==1 && PodeMoverF(atual.x-1, atual.y, mapa)) return C_LEFT;
-    if(r==2 && PodeMoverF(atual.x, atual.y+1, mapa)) return C_DOWN;
-    if(r==3 && PodeMoverF(atual.x, atual.y-1, mapa)) return C_UP;
-    return C_SEILA;
+    if (atual.y + 1 < 20 && mapa->grade[atual.y + 1][atual.x] != '#') {
+        a_visitar[tamanho_visitar] = atual;
+        a_visitar[tamanho_visitar++].y++;
+
+        visitado[atual.y + 1][atual.x] = C_DOWN;
+    }
+    if (atual.x + 1 < 40 && mapa->grade[atual.y][atual.x + 1] != '#') {
+        a_visitar[tamanho_visitar] = atual;
+        a_visitar[tamanho_visitar++].x++;
+
+        visitado[atual.y][atual.x + 1] = C_RIGHT;
+    }
+    if (atual.y > 0 && mapa->grade[atual.y - 1][atual.x] != '#') {
+        a_visitar[tamanho_visitar] = atual;
+        a_visitar[tamanho_visitar++].y--;
+
+        visitado[atual.y - 1][atual.x] = C_UP;
+    }
+    if (PodeMoverF(atual.x - 1, atual.y, mapa)) {
+        a_visitar[tamanho_visitar] = atual;
+        a_visitar[tamanho_visitar++].x--;
+
+        visitado[atual.y][atual.x - 1] = C_LEFT;
+    }
+
+    for (int i = 0; i < tamanho_visitar; i++) {
+        atual = a_visitar[i];
+
+        if (atual.x == alvo.x && atual.y == alvo.y)
+            return visitado[atual.y][atual.x];
+
+        if (atual.y + 1 < 20 && mapa->grade[atual.y + 1][atual.x] != '#' && visitado[atual.y + 1][atual.x] == C_SEILA) {
+            a_visitar[tamanho_visitar] = atual;
+            a_visitar[tamanho_visitar++].y++;
+
+            visitado[atual.y + 1][atual.x] = visitado[atual.y][atual.x];
+        }
+        if (atual.x + 1 < 40 && mapa->grade[atual.y][atual.x + 1] != '#' && visitado[atual.y][atual.x + 1] == C_SEILA) {
+            a_visitar[tamanho_visitar] = atual;
+            a_visitar[tamanho_visitar++].x++;
+
+            visitado[atual.y][atual.x + 1] = visitado[atual.y][atual.x];
+        }
+        if (atual.y > 0 && mapa->grade[atual.y - 1][atual.x] != '#' && visitado[atual.y - 1][atual.x] == C_SEILA) {
+            a_visitar[tamanho_visitar] = atual;
+            a_visitar[tamanho_visitar++].y--;
+
+            visitado[atual.y - 1][atual.x] = visitado[atual.y][atual.x];
+        }
+        if (PodeMoverF(atual.x - 1, atual.y, mapa) && visitado[atual.y][atual.x - 1] == C_SEILA) {
+            a_visitar[tamanho_visitar] = atual;
+            a_visitar[tamanho_visitar++].x--;
+
+            visitado[atual.y][atual.x - 1] = visitado[atual.y][atual.x];
+        }
+    }
+
+    return C_UP;
 }
 
 Posicao ProcessarPortal(Posicao atual, Mapa *mapa) {
