@@ -12,12 +12,10 @@ typedef enum Tela {
     TELA_JOGO,
     TELA_GAMEOVER,
     TELA_VITORIA,
-    TELA_VITORIA_FINAL
-} Tela;
-typedef enum Comandos{
+    TELA_VITORIA_FINAL,
     SALVAR,
     CARREGAR
-} Comandos;
+} Tela;
 typedef struct {
     int x;
     int y;
@@ -76,3 +74,4 @@ typedef struct {
 
 
 #endif
+
