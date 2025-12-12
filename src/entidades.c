@@ -35,7 +35,7 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
     alvo.x = mapa->pacman.pos.x;
     alvo.y = mapa->pacman.pos.y;
 
-    if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > mapa->nivelAtual * mapa->nivelAtual * 10) {
+    if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > mapa->nivelAtual * mapa->nivelAtual * 5) {
         alvo.x = ((time(NULL) / 10) * 1091235 + 12349) % 40;
         alvo.y = ((time(NULL) / 10) * 4852183 + 1984) % 20;
     }
