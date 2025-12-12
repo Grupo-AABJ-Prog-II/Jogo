@@ -111,12 +111,9 @@ Tela tela_menu() {
     if (IsKeyPressed(KEY_Q)) return TELA_SAIR;
     if (IsKeyPressed(KEY_V)) return TELA_JOGO;
     if (IsKeyPressed(KEY_C)) return CARREGAR;
-    if (IsKeyPressed(KEY_S)) return SALVAR;
     // Botões
     if (DrawCenteredButton("Voltar(V)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
-    if(DrawCenteredButton("Salvar(S)", startY + spacing, 20, LIGHTGRAY, DARKGREEN))
-        return SALVAR;
     
     if(DrawCenteredButton("Carregar Save(C)", startY + spacing * 2, 20, LIGHTGRAY, DARKGREEN))
         return CARREGAR;
@@ -125,8 +122,12 @@ Tela tela_menu() {
         return TELA_MENU_PRINCIPAL;
 
     if (DrawCenteredButton("Sair do Jogo (Q)", startY + spacing * 4, fontSize, WHITE, RED))
-        return TELA_SAIR;
-
+        return TELA_SAIR;    
+    
+    if(DrawCenteredButton("Salvar(S)", startY + spacing, 20, LIGHTGRAY, DARKGREEN))
+        return SALVAR;
+    
+    if (IsKeyPressed(KEY_S)) return SALVAR;
     return TELA_MENU;
 }
 
