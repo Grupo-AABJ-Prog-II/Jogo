@@ -74,8 +74,11 @@ int main(void) {
 
             case TELA_MENU:
                 Tela acao2 = tela_menu();
-                if (acao2 == SALVAR) SalvarJogo(mapaAtual, "savegame.bin"); tela = TELA_MENU;
-                if (acao2 == CARREGAR) {
+                if (acao2 == SALVAR){ 
+                SalvarJogo(mapaAtual, "savegame.bin"); 
+                tela = TELA_MENU;
+                }
+                else if (acao2 == CARREGAR) {
                     Mapa *c = CarregarJogo("savegame.bin");
                     if(c) { LiberarMapa(mapaAtual); mapaAtual=c; tela=TELA_JOGO; }
                 }
@@ -150,4 +153,5 @@ int main(void) {
     return 0;
 
 }
+
 
