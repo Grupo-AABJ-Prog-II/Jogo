@@ -25,7 +25,7 @@ int main(void) {
     stats.pelletsRestantes = ContarPastilhasRestantes(mapaAtual);
     stats.nivel = mapaAtual->nivelAtual;
 
-    int tamanho_bloco = 20;
+    int tamanho_bloco = 30;
     InitWindow(tamanho_bloco * 40, tamanho_bloco * 21, "Pequemen");
     SetTargetFPS(60);
 
