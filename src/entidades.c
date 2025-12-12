@@ -35,7 +35,7 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
     alvo.x = mapa->pacman.pos.x;
     alvo.y = mapa->pacman.pos.y;
 
-    if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > 5) {
+    if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > mapa->nivelAtual * mapa->nivelAtual * 10) {
         alvo.x = ((time(NULL) / 10) * 1091235 + 12349) % 40;
         alvo.y = ((time(NULL) / 10) * 4852183 + 1984) % 20;
     }
@@ -48,7 +48,7 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
             visitado[y][x] = C_SEILA;
 
     if (atual.x == alvo.x && atual.y == alvo.y)
-        return C_UP;
+        return C_SEILA;
     
     if (atual.y + 1 < 20 && mapa->grade[atual.y + 1][atual.x] != '#') {
         a_visitar[tamanho_visitar] = atual;
