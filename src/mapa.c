@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h> 
 #include <time.h>
-#include <raylib.h> // Necessário para GetTime()
+#include <raylib.h> 
 
 #include "tipos.h"
 #include "mapa.h"
@@ -15,14 +15,12 @@ void DesenharSpriteOuForma(Texture2D tex, int x, int y, Color cor, int ehCirculo
 void ConectarPortais(Mapa *mapa);
 void FloodFill(Mapa *mapa, int x, int y, int **visited); 
 
-// Função auxiliar para carregar mapa pelo número
 Mapa* CarregarMapaNivel(int nivel) {
     char nomeArquivo[50];
     sprintf(nomeArquivo, "mapa%d.txt", nivel);
     
-    // Tenta abrir apenas para ver se existe
     FILE *teste = fopen(nomeArquivo, "r");
-    if (!teste) return NULL; // Se não existir, retorna NULL (fim dos níveis)
+    if (!teste) return NULL; 
     fclose(teste);
 
     FILE *arquivo = fopen(nomeArquivo, "r");
@@ -56,7 +54,6 @@ Mapa* CarregarMapaNivel(int nivel) {
             if (ch == 'P') { 
                 mapa->pacman.spawnPos = (Posicao){c, l};
                 mapa->pacman.pos = mapa->pacman.spawnPos;
-                // Inicializa posição visual igual à lógica
                 mapa->pacman.pixelPos = (Vector2){(float)c, (float)l};
                 mapa->grade[l][c] = '.'; 
                 pacmanCount++; 
@@ -72,9 +69,9 @@ Mapa* CarregarMapaNivel(int nivel) {
                 mapa->fantasmas = realloc(mapa->fantasmas, mapa->numero_fantasmas * sizeof(Fantasma));
                 Fantasma *f = &mapa->fantasmas[mapa->numero_fantasmas - 1];
                 f->pos = (Posicao){c, l};
-                f->pixelPos = (Vector2){(float)c, (float)l}; // Inicializa visual
+                f->pixelPos = (Vector2){(float)c, (float)l}; 
                 f->spawnPosOriginal = f->pos;
-                f->moveTimer = 0; // Inicializa timer zerado
+                f->moveTimer = 0; 
                 f->tempoVulneravel = 0;
                 f->estaVulneravel = false;
             }
@@ -94,62 +91,40 @@ Mapa* CarregarMapaNivel(int nivel) {
     return mapa;
 }
 
-// Wrapper para manter compatibilidade com código antigo se necessário
 Mapa* CarregarMapa(const char *nomeArquivo) {
-    // Tenta extrair o número do nível do nome do arquivo, senão assume 1
     int nivel = 1;
-    if (sscanf(nomeArquivo, "mapa%d.txt", &nivel) != 1) {
-        // Se não conseguiu ler o numero (ex: mapa_teste.txt), tenta carregar direto
-        // Mas como nossa logica mudou, vamos forçar nivel 1 se falhar
-        nivel = 1;
-    }
+    if (sscanf(nomeArquivo, "mapa%d.txt", &nivel) != 1) nivel = 1;
     return CarregarMapaNivel(nivel);
 }
 
-// --- SISTEMA DE SAVE / LOAD ---
-
+// --- SAVE/LOAD (Binário) ---
 bool SalvarJogo(Mapa *mapa, const char *nomeArquivo) {
     FILE *f = fopen(nomeArquivo, "wb");
     if (!f) return false;
 
-    // 1. Dados Básicos e Estado
     fwrite(&mapa->nivelAtual, sizeof(int), 1, f);
     fwrite(&mapa->linhas, sizeof(int), 1, f);
     fwrite(&mapa->colunas, sizeof(int), 1, f);
+    bool iniciado = false; fwrite(&iniciado, sizeof(bool), 1, f);
     
-    // IMPORTANTE: Ao salvar, definimos jogoIniciado como false para que, ao carregar,
-    // o jogador precise dar um input antes dos fantasmas se moverem.
-    // Isso evita morte instantânea ao carregar se estiver cercado.
-    bool iniciado = false; 
-    fwrite(&iniciado, sizeof(bool), 1, f);
-    
-    // 2. Pacman (Score, Vidas, Posição)
     fwrite(&mapa->pacman, sizeof(Pacman), 1, f);
 
-    // 3. Grade (Onde estão as pellets restantes)
-    for (int i = 0; i < mapa->linhas; i++) {
-        fwrite(mapa->grade[i], sizeof(char), mapa->colunas, f);
-    }
+    for (int i = 0; i < mapa->linhas; i++) fwrite(mapa->grade[i], sizeof(char), mapa->colunas, f);
 
-    // 4. Fantasmas (Quantidade e Lista)
     fwrite(&mapa->numero_fantasmas, sizeof(int), 1, f);
-    if (mapa->numero_fantasmas > 0) {
-        fwrite(mapa->fantasmas, sizeof(Fantasma), mapa->numero_fantasmas, f);
-    }
+    if (mapa->numero_fantasmas > 0) fwrite(mapa->fantasmas, sizeof(Fantasma), mapa->numero_fantasmas, f);
 
-    // 5. Portais (Quantidade e Listas)
     fwrite(&mapa->qtdPortais, sizeof(int), 1, f);
     if (mapa->qtdPortais > 0) {
         fwrite(mapa->portais, sizeof(Posicao), mapa->qtdPortais, f);
         fwrite(mapa->conexoes, sizeof(int), mapa->qtdPortais, f);
     }
     
-    // 6. Spawn Calculado
     fwrite(&mapa->spawnFantasma, sizeof(Posicao), 1, f);
     fwrite(&mapa->temSpawn, sizeof(int), 1, f);
 
     fclose(f);
-    printf("Jogo salvo com sucesso em %s\n", nomeArquivo);
+    printf("Jogo salvo: %s\n", nomeArquivo);
     return true;
 }
 
@@ -159,32 +134,17 @@ Mapa* CarregarJogo(const char *nomeArquivo) {
 
     Mapa *m = (Mapa*)calloc(1, sizeof(Mapa));
 
-    // 1. Lê dados básicos
     fread(&m->nivelAtual, sizeof(int), 1, f);
     fread(&m->linhas, sizeof(int), 1, f);
     fread(&m->colunas, sizeof(int), 1, f);
     fread(&m->jogoIniciado, sizeof(bool), 1, f);
 
-    // 2. Pacman
     fread(&m->pacman, sizeof(Pacman), 1, f);
-    
-    // [CORREÇÃO CRÍTICA] Resetar o timer de movimento ao carregar!
-    // O valor salvo em 'moveTimer' é referente ao tempo de execução da sessão anterior.
-    // Se não resetarmos para GetTime(), o jogo pode achar que precisa esperar horas (ou o contrário).
-    m->pacman.moveTimer = 0; // Isso força o movimento a ser processado imediatamente no próximo loop se o tempo bater, ou sincroniza.
-    // Melhor ainda: definir como GetTime() atual para reiniciar o ciclo
-    // Mas como a lógica de movimento verifica (GetTime() - moveTimer >= delay), 
-    // se moveTimer for 0 e GetTime() for alto, ele move instantaneamente.
-    // Vamos deixar 0 para garantir resposta imediata no primeiro frame.
-
-    // Recalcula pixelPos para evitar glitch visual ao carregar (teleporte suave)
+    m->pacman.moveTimer = 0; 
     m->pacman.pixelPos.x = (float)m->pacman.pos.x;
     m->pacman.pixelPos.y = (float)m->pacman.pos.y;
-    
-    // Reseta direção próxima para evitar movimento indesejado imediato
     m->pacman.proxDir = (Posicao){0, 0};
 
-    // 3. Grade
     m->grade = malloc(m->linhas * sizeof(char*));
     for (int i = 0; i < m->linhas; i++) {
         m->grade[i] = malloc((m->colunas + 1) * sizeof(char));
@@ -192,38 +152,27 @@ Mapa* CarregarJogo(const char *nomeArquivo) {
         m->grade[i][m->colunas] = '\0';
     }
 
-    // 4. Fantasmas
     fread(&m->numero_fantasmas, sizeof(int), 1, f);
     if (m->numero_fantasmas > 0) {
         m->fantasmas = malloc(m->numero_fantasmas * sizeof(Fantasma));
         fread(m->fantasmas, sizeof(Fantasma), m->numero_fantasmas, f);
-        
-        // Atualiza pixelPos dos fantasmas e reseta timers
         for(int i=0; i<m->numero_fantasmas; i++) {
             m->fantasmas[i].pixelPos.x = (float)m->fantasmas[i].pos.x;
             m->fantasmas[i].pixelPos.y = (float)m->fantasmas[i].pos.y;
-            m->fantasmas[i].moveTimer = 0; // Resetar timer também!
-            
-            // Se o jogo foi salvo com fantasmas vulneráveis, precisamos ajustar o tempo relativo
-            // O tempoVulneravel salvo é absoluto da sessão anterior.
-            // Se quisermos manter a vulnerabilidade, teríamos que salvar "quanto tempo falta" e somar ao GetTime() atual.
-            // Para simplificar e evitar bugs, vamos remover a vulnerabilidade ao carregar.
+            m->fantasmas[i].moveTimer = 0; 
             m->fantasmas[i].estaVulneravel = false;
             m->fantasmas[i].tempoVulneravel = 0;
         }
     }
 
-    // 5. Portais
     fread(&m->qtdPortais, sizeof(int), 1, f);
     if (m->qtdPortais > 0) {
         m->portais = malloc(m->qtdPortais * sizeof(Posicao));
         fread(m->portais, sizeof(Posicao), m->qtdPortais, f);
-        
         m->conexoes = malloc(m->qtdPortais * sizeof(int));
         fread(m->conexoes, sizeof(int), m->qtdPortais, f);
     }
 
-    // 6. Spawn Point
     fread(&m->spawnFantasma, sizeof(Posicao), 1, f);
     fread(&m->temSpawn, sizeof(int), 1, f);
 
@@ -258,7 +207,8 @@ void CarregarSprites(Sprites *sprites) {
     sprites->superPastilha = LoadTexture("assets/power.png");
     sprites->pacman = LoadTexture("assets/pacman.png");
     sprites->fantasma = LoadTexture("assets/ghost.png");
-    sprites->portal = LoadTexture("assets/portal.png");
+    sprites->portal1 = LoadTexture("assets/portal1.png"); // Portal Laranja
+    sprites->portal2 = LoadTexture("assets/portal2.png"); // Portal Azul
 }
 
 void DescarregarSprites(Sprites *sprites) {
@@ -267,11 +217,11 @@ void DescarregarSprites(Sprites *sprites) {
     UnloadTexture(sprites->superPastilha);
     UnloadTexture(sprites->pacman);
     UnloadTexture(sprites->fantasma);
-    UnloadTexture(sprites->portal);
+    UnloadTexture(sprites->portal1);
+    UnloadTexture(sprites->portal2);
 }
 
 void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
-    // Desenha o cenário (estático)
     for (int y = 0; y < mapa->linhas; y++) {
         for (int x = 0; x < mapa->colunas; x++) {
             int px = x * tamanhoBloco;
@@ -283,28 +233,48 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
                 case '.': DesenharSpriteOuForma(sprites->pastilha, px, py, WHITE, 1, 0.2f, WHITE, tamanhoBloco, 0.0f); break;
                 case 'o': DesenharSpriteOuForma(sprites->superPastilha, px, py, GREEN, 1, 0.6f, WHITE, tamanhoBloco, 0.0f); break;
                 case '+': DesenharSpriteOuForma(sprites->superPastilha, px, py, GOLD, 1, 0.6f, GOLD, tamanhoBloco, 0.0f); break;
-                case 'T': DesenharSpriteOuForma(sprites->portal, px, py, PINK, 0, 1.0f, WHITE, tamanhoBloco, 0.0f); break;
+                case 'T': 
+                    // Lógica para diferenciar cores dos portais
+                    {
+                        int idx = -1;
+                        for(int i=0; i<mapa->qtdPortais; i++) {
+                            if(mapa->portais[i].x == x && mapa->portais[i].y == y) {
+                                idx = i;
+                                break;
+                            }
+                        }
+                        
+                        // Se índice for par (0, 2) -> Portal 1 (Laranja)
+                        // Se índice for ímpar (1, 3) -> Portal 2 (Azul)
+                        if (idx != -1) {
+                            if (idx % 2 == 0) {
+                                DesenharSpriteOuForma(sprites->portal1, px, py, ORANGE, 0, 1.0f, WHITE, tamanhoBloco, 0.0f);
+                            } else {
+                                DesenharSpriteOuForma(sprites->portal2, px, py, SKYBLUE, 0, 1.0f, WHITE, tamanhoBloco, 0.0f);
+                            }
+                        } else {
+                            DesenharSpriteOuForma(sprites->portal1, px, py, PINK, 0, 1.0f, WHITE, tamanhoBloco, 0.0f);
+                        }
+                    }
+                    break;
             }
         }
     }
 
-    // Desenha Pacman (Usando pixelPos para movimento fluido)
+    // Desenha Pacman
     int pacX = (int)(mapa->pacman.pixelPos.x * tamanhoBloco);
     int pacY = (int)(mapa->pacman.pixelPos.y * tamanhoBloco);
-    
     float angulo = 0.0f;
     if (mapa->pacman.dir.x == 1) angulo = 0.0f;
     else if (mapa->pacman.dir.x == -1) angulo = 180.0f;
     else if (mapa->pacman.dir.y == 1) angulo = 90.0f;
     else if (mapa->pacman.dir.y == -1) angulo = 270.0f;
-    
     DesenharSpriteOuForma(sprites->pacman, pacX, pacY, YELLOW, 1, 1.0f, WHITE, tamanhoBloco, angulo);
 
-    // Desenha Fantasmas (Usando pixelPos para movimento fluido)
+    // Desenha Fantasmas
     for (int i = 0; i < mapa->numero_fantasmas; i++) {
         int fantX = (int)(mapa->fantasmas[i].pixelPos.x * tamanhoBloco);
         int fantY = (int)(mapa->fantasmas[i].pixelPos.y * tamanhoBloco);
-        
         Color cor = RED;
         Color tint = WHITE;
         if (mapa->fantasmas[i].estaVulneravel) {
@@ -315,7 +285,6 @@ void DesenharMapa(Mapa *mapa, Sprites *sprites, int tamanhoBloco) {
     }
 }
 
-// Implementações auxiliares
 double CalcularDistancia(Posicao p1, Posicao p2) {
     return sqrt(pow(p2.x - p1.x, 2) + pow(p2.y - p1.y, 2));
 }

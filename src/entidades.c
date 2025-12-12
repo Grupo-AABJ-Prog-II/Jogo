@@ -15,9 +15,11 @@ enum Caminho { C_SEILA, C_UP, C_DOWN, C_LEFT, C_RIGHT };
 int PodeMoverF(int x, int y, Mapa *mapa) {
     if (x < 0 || x >= mapa->colunas || y < 0 || y >= mapa->linhas) return 0;
     if (mapa->grade[y][x] == '#') return 0;
-    // Fantasmas colidem entre si
+    
+    // Fantasmas colidem entre si?
     for (int i = 0; i < mapa->numero_fantasmas; i++)
         if (mapa->fantasmas[i].pos.x == x && mapa->fantasmas[i].pos.y == y) return 0;
+    
     return 1;
 }
 
@@ -35,14 +37,13 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
     alvo.x = mapa->pacman.pos.x;
     alvo.y = mapa->pacman.pos.y;
 
+    // Comportamento aleatório se o alvo estiver muito longe (simula perda de "cheiro")
     if (DIST(alvo.x, atual.x) + DIST(alvo.y, atual.y) > mapa->nivelAtual * 6) {
         alvo.x = ((time(NULL) / 10) * 1091235 + 12349) % 40;
         alvo.y = ((time(NULL) / 10) * 4852183 + 1984) % 20;
     }
 
-
     enum Caminho visitado[20][40];
-
     for (int y = 0; y < 20; y++)
         for (int x = 0; x < 40; x++)
             visitado[y][x] = C_SEILA;
@@ -50,28 +51,21 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
     if (atual.x == alvo.x && atual.y == alvo.y)
         return C_SEILA;
     
+    // Adiciona vizinhos válidos à lista de visita
     if (atual.y + 1 < 20 && mapa->grade[atual.y + 1][atual.x] != '#') {
-        a_visitar[tamanho_visitar] = atual;
-        a_visitar[tamanho_visitar++].y++;
-
+        a_visitar[tamanho_visitar] = atual; a_visitar[tamanho_visitar++].y++;
         visitado[atual.y + 1][atual.x] = C_DOWN;
     }
     if (atual.x + 1 < 40 && mapa->grade[atual.y][atual.x + 1] != '#') {
-        a_visitar[tamanho_visitar] = atual;
-        a_visitar[tamanho_visitar++].x++;
-
+        a_visitar[tamanho_visitar] = atual; a_visitar[tamanho_visitar++].x++;
         visitado[atual.y][atual.x + 1] = C_RIGHT;
     }
     if (atual.y > 0 && mapa->grade[atual.y - 1][atual.x] != '#') {
-        a_visitar[tamanho_visitar] = atual;
-        a_visitar[tamanho_visitar++].y--;
-
+        a_visitar[tamanho_visitar] = atual; a_visitar[tamanho_visitar++].y--;
         visitado[atual.y - 1][atual.x] = C_UP;
     }
     if (PodeMoverF(atual.x - 1, atual.y, mapa)) {
-        a_visitar[tamanho_visitar] = atual;
-        a_visitar[tamanho_visitar++].x--;
-
+        a_visitar[tamanho_visitar] = atual; a_visitar[tamanho_visitar++].x--;
         visitado[atual.y][atual.x - 1] = C_LEFT;
     }
 
@@ -109,7 +103,6 @@ enum Caminho SeguirJogador(Posicao atual, Mapa *mapa) {
 
     return C_UP;
 }
-
 Posicao ProcessarPortal(Posicao atual, Mapa *mapa) {
     for (int i = 0; i < mapa->qtdPortais; i++) {
         if (mapa->portais[i].x == atual.x && mapa->portais[i].y == atual.y) {
@@ -192,6 +185,7 @@ Tela AtualizarJogo(Mapa *mapa) {
 
     Pacman *pac = &mapa->pacman;
 
+    // --- PACMAN ---
     if (GetTime() - pac->moveTimer >= VELOCIDADE_NORMAL) {
         pac->moveTimer = GetTime();
         int nextX = pac->pos.x + pac->proxDir.x;
@@ -206,12 +200,14 @@ Tela AtualizarJogo(Mapa *mapa) {
             if (PodeMoverP(nextX, nextY, mapa)) { pac->pos.x = nextX; pac->pos.y = nextY; }
         }
         
+        // Portal Pacman
         if (mapa->grade[pac->pos.y][pac->pos.x] == 'T') {
             Posicao saida = ProcessarPortal(pac->pos, mapa);
             pac->pos = saida;
             pac->pixelPos = (Vector2){(float)saida.x, (float)saida.y};
         }
 
+        // Itens
         char item = mapa->grade[pac->pos.y][pac->pos.x];
         int pontos = 0;
         if (item == '.') { pontos = 10; mapa->grade[pac->pos.y][pac->pos.x] = ' '; }
@@ -224,10 +220,9 @@ Tela AtualizarJogo(Mapa *mapa) {
             if (pac->score / 1000 > scoreAntes / 1000) pac->vidas++;
         }
     }
-
-    // Usa a função nativa da Raylib agora
     pac->pixelPos = Vector2Lerp(pac->pixelPos, (Vector2){(float)pac->pos.x, (float)pac->pos.y}, 0.25f);
 
+    // --- FANTASMAS ---
     if (mapa->jogoIniciado) {
         for (int i = 0; i < mapa->numero_fantasmas; i++) {
             Fantasma *f = &mapa->fantasmas[i];
@@ -247,6 +242,13 @@ Tela AtualizarJogo(Mapa *mapa) {
                     case C_RIGHT: if (PodeMoverF(f->pos.x + 1, f->pos.y, mapa)) f->pos.x++; break;
                     case C_LEFT: if (PodeMoverF(f->pos.x - 1, f->pos.y, mapa)) f->pos.x--; break;
                     default: break;
+                }
+
+                // [NOVIDADE] Portal Fantasma
+                if (mapa->grade[f->pos.y][f->pos.x] == 'T') {
+                    Posicao saida = ProcessarPortal(f->pos, mapa);
+                    f->pos = saida;
+                    f->pixelPos = (Vector2){(float)saida.x, (float)saida.y}; // Teleporte visual imediato
                 }
             }
             f->pixelPos = Vector2Lerp(f->pixelPos, (Vector2){(float)f->pos.x, (float)f->pos.y}, 0.25f);

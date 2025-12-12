@@ -16,14 +16,15 @@ typedef enum Tela {
     SALVAR,
     CARREGAR
 } Tela;
+
 typedef struct {
     int x;
     int y;
 } Posicao;
 
 typedef struct {
-    Posicao pos;        // Posição Lógica (Grade)
-    Vector2 pixelPos;   // Posição Visual (Pixels)
+    Posicao pos;        
+    Vector2 pixelPos;   
     Posicao dir;
     Posicao proxDir;
     Posicao spawnPos;
@@ -34,7 +35,7 @@ typedef struct {
 
 typedef struct {
     Posicao pos;
-    Vector2 pixelPos;   // Posição Visual
+    Vector2 pixelPos;   
     Posicao spawnPosOriginal;
     double moveTimer;
     double tempoVulneravel;
@@ -58,9 +59,8 @@ typedef struct {
     int temSpawn;
     int qtdPointPellets;
     
-    // --- Controle de Estado ---
     int nivelAtual;
-    bool jogoIniciado; // True se o player já moveu
+    bool jogoIniciado; 
 } Mapa;
 
 typedef struct {
@@ -69,9 +69,9 @@ typedef struct {
     Texture2D superPastilha;
     Texture2D pacman;
     Texture2D fantasma;
-    Texture2D portal;
+    // Alterado para dois portais distintos
+    Texture2D portal1; // Laranja
+    Texture2D portal2; // Azul
 } Sprites;
 
-
 #endif
-
