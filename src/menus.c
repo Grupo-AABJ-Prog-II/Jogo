@@ -49,7 +49,11 @@ bool DrawCenteredButton(const char* text, int y, int fontSize, Color normal, Col
 
 Tela tela_menu_principal() {
     DrawCenteredText("MENU PRINCIPAL", 100, 40, YELLOW);
-
+    if (IsKeyPressed(KEY_C))
+        return CARREGAR;
+    if (DrawCenteredButton("Carregar Jogo (C)", 300, 30, WHITE, GREEN))
+        return CARREGAR;
+    
     if (DrawCenteredButton("Novo Jogo", 250, 30, WHITE, GREEN))
         return TELA_JOGO;
     
@@ -106,14 +110,15 @@ Tela tela_menu() {
     if (IsKeyPressed(KEY_N)) return TELA_MENU_PRINCIPAL; 
     if (IsKeyPressed(KEY_Q)) return TELA_SAIR;
     if (IsKeyPressed(KEY_V)) return TELA_JOGO;
-    
+    if (IsKeyPressed(KEY_C)) return CARREGAR;
     // Botões
     if (DrawCenteredButton("Voltar(V)", startY, fontSize, WHITE, GREEN))
         return TELA_JOGO;
-
-    // Botões visuais para Salvar/Carregar (a lógica real está no main loop)
-    DrawCenteredText("Salvar(S)", startY + spacing, 20, LIGHTGRAY);
-    DrawCenteredText("Carregar Save(C)", startY + spacing * 2, 20, LIGHTGRAY);
+    if(DrawCenteredButton("Salvar", startY + spacing, 20, LIGHTGRAY, DARKGREEN))
+        return SALVAR;
+    
+    if(DrawCenteredButton("Carregar Save(C)", startY + spacing * 2, 20, LIGHTGRAY, DARKGREEN))
+        return CARREGAR;
 
     if (DrawCenteredButton("Menu Principal (N)", startY + spacing * 3, fontSize, WHITE, BLUE))
         return TELA_MENU_PRINCIPAL;
@@ -165,4 +170,5 @@ Tela tela_vitoria_final(int pontuacaoFinal) {
     return TELA_VITORIA_FINAL;
 
 }
+
 
