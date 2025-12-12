@@ -57,9 +57,7 @@ int main(void) {
                 } 
                 else if (acao == TELA_SAIR) tela = TELA_SAIR;
                 else if (acao == TELA_RESOLUCAO_MENU_PRINCIPAL) tela = TELA_RESOLUCAO_MENU_PRINCIPAL;
-                
-                // Tecla C para carregar no Menu Principal
-                if (IsKeyPressed(KEY_C)) {
+                else if (acao == CARREGAR){
                     Mapa *carregado = CarregarJogo("savegame.bin");
                     if (carregado) {
                         LiberarMapa(mapaAtual);
@@ -75,13 +73,13 @@ int main(void) {
                 break;
 
             case TELA_MENU:
-                tela = tela_menu();
-                // Save ('S') e Load ('C') no Pause
-                if (IsKeyPressed(KEY_S)) SalvarJogo(mapaAtual, "savegame.bin");
-                if (IsKeyPressed(KEY_C)) {
+                Tela acao2 = tela_menu();
+                if (acao2 == SALVAR) SalvarJogo(mapaAtual, "savegame.bin");
+                if (acao2 == CARREGAR) {
                     Mapa *c = CarregarJogo("savegame.bin");
                     if(c) { LiberarMapa(mapaAtual); mapaAtual=c; tela=TELA_JOGO; }
                 }
+                else{tela = acao2;}
                 break;
 
             case TELA_JOGO:
@@ -122,10 +120,6 @@ int main(void) {
                 }
                 
                 if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_P)) tela = TELA_MENU;
-                
-                // Hotkeys In-Game (opcional)
-                if (IsKeyPressed(KEY_S)) SalvarJogo(mapaAtual, "savegame.bin");
-                // Evitar carregar durante o jogo sem pausar para não bugar input, mas se quiser pode deixar
                 break;
 
             case TELA_GAMEOVER:
@@ -154,4 +148,5 @@ int main(void) {
     LiberarMapa(mapaAtual);
     CloseWindow();
     return 0;
+
 }
